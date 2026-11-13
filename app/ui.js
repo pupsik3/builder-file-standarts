@@ -8,3 +8,5 @@ export function iconButton(label, code, { action = '', size = 16, className = ''
   return `<button type="button" class="icon-button ${className}" aria-label="${label}" title="${label}" ${action ? `data-action="${action}"` : ''} ${extra}>${icon(code, size)}</button>`;
 }
 
+export const messagesButton = () => iconButton('Сообщения', 'E65D', { className: 'support-button' });
+

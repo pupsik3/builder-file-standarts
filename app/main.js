@@ -1,5 +1,5 @@
 import { files } from './files.js';
-import { asset, icon, iconButton } from './ui.js';
+import { asset, icon, iconButton, messagesButton } from './ui.js';
 import { cardCommands, maxCardCommands, previewPanel } from './menus.js';
 import { bindFormattingToolbar, renderViewer, viewerMenu } from './viewer.js';
 import { bindOutline, createOutlineState, syncOutline } from './outline.js';
@@ -69,7 +69,7 @@ registry.innerHTML = `<div class="registry-shell">
   <aside class="registry-tools" aria-label="Действия Диска">
     <button type="button" class="initials" aria-label="Профиль">КС</button>
     <div class="registry-tool-actions">${[['Сортировка', 'EB66'], ['Вид', 'E748'], ['Ссылка', 'E6A7'], ['Скачать', 'E628'], ['Редактировать', 'E660'], ['Ещё', 'E9D9']].map(([label, code]) => iconButton(label, code, { size: code === 'E9D9' ? 18 : 24 })).join('')}</div>
-    <div class="support">${[['Заметки', 'EA42'], ['Звонки', 'E636'], ['Сообщения', 'E65D']].map(([label, code]) => iconButton(label, code, { className: 'support-button' })).join('')}<button type="button" class="icon-button help-button" aria-label="Помощь"><img src="${asset('d9537.svg')}" alt=""></button></div>
+    <div class="support">${[['Заметки', 'EA42'], ['Звонки', 'E636']].map(([label, code]) => iconButton(label, code, { className: 'support-button' })).join('')}${messagesButton()}<button type="button" class="icon-button help-button" aria-label="Помощь"><img src="${asset('d9537.svg')}" alt=""></button></div>
   </aside>
 </div>`;
 

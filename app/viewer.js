@@ -1,4 +1,4 @@
-import { asset, icon, iconButton } from './ui.js';
+import { asset, icon, iconButton, messagesButton } from './ui.js';
 import { commandList, panelClose } from './menus.js';
 import { flattenNavigation, renderOutline } from './outline.js';
 import { renderDocumentFlow } from './document.js';
@@ -66,7 +66,7 @@ function toolbar(tools, editing) {
   return `<aside class="viewer-toolbar" aria-label="Инструменты файла"><div class="viewer-tools${editing ? ' editor-tools' : ''}">
     ${tools.map(([label, glyph, command, className]) => iconButton(label, glyph, { size: 24, className: `${editing ? 'viewer-nav-button ' : ''}${className ?? ''}`, extra: command ? `data-command="${command}"` : '' })).join('')}
     ${iconButton('Меню файла', 'E9D9', { size: 20, className: 'viewer-more', action: 'viewer-menu', extra: 'aria-haspopup="dialog" aria-expanded="false"' })}
-    </div>${assetButton('Помощь', editing ? '5c691.svg' : 'd9537.svg', 'data-help')}</aside>`;
+    </div><div class="support">${messagesButton()}${assetButton('Помощь', editing ? '5c691.svg' : 'd9537.svg', 'data-help')}</div></aside>`;
 }
 
 function formattingToolbar() {

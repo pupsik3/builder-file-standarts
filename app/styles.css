@@ -203,7 +203,7 @@ button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent
 .header-pill.edit:is(:hover,:focus-visible) { border-color: #0085f2; }
 .header-pill.edit:active { border-color: #0085f2; background: #f5faff; }
 .header-pill.edit .icon { color: var(--toolbar); }
-.header-pill.save { gap: 2px; border-color: #12a12c; }
+.header-pill.save { gap: 2px; border-color: rgba(18, 161, 44, .35); }
 .header-pill.save:is(:hover,:focus-visible) { border-color: #00a31f; }
 .header-pill.save:active { border-color: #00a31f; background: #f7fff8; }
 .header-pill.save span:not(.icon) { display: grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 100%; background: #12a12c; color: #fff; }
