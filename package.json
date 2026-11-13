@@ -1,0 +1,9 @@
+{
+  "name": "saby-file-registry",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check app/main.js && node --check app/files.js && node --check app/ui.js && node --check app/menus.js && node --check app/viewer.js && node --check app/outline.js && node --check app/document.js"
+  }
+}
