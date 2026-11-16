@@ -4,6 +4,6 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check app/main.js && node --check app/files.js && node --check app/ui.js && node --check app/menus.js && node --check app/viewer.js && node --check app/outline.js && node --check app/document.js"
+    "check": "node --check server.js && node --check app/main.js && node --check app/files.js && node --check app/ui.js && node --check app/menus.js && node --check app/viewer.js && node --check app/outline.js && node --check app/document.js && node --check app/file-content.js && node --check app/dashboard.js && node --check app/office-pages.js && node --check app/sheet-data.js"
   }
 }

@@ -20,7 +20,7 @@ function navigationRows(file, state, items = file.navigation, level = 0) {
     return `<div class="outline-row${selected ? ' current' : ''}${item.wrap ? ' wrap-row' : ''}" data-navigation-row="${item.id}" style="--outline-level:${level}">
       ${doc ? item.children ? iconButton(`${expanded ? 'Свернуть' : 'Раскрыть'} «${item.title}»`, expanded ? 'EB8A' : 'EB89', { size: 12, className: 'outline-expander', action: 'outline-branch', extra: `data-id="${item.id}" aria-expanded="${expanded}" aria-controls="branch-${item.id}"` }) : '<span class="outline-expander-space"></span>' : ''}
       <button type="button" class="outline-select" data-action="outline-select" data-id="${item.id}"${selected ? ` aria-current="${doc ? 'location' : 'page'}"` : ''}>${item.title}</button>
-      ${doc ? '' : `<span class="outline-home" aria-hidden="true">${icon('E64C')}</span><span class="outline-row-tools">${iconButton('Видимость страницы', 'E651', { size: 24 })}${iconButton('Действия страницы', 'E9D9')}</span>`}
+      ${file.type !== 'site' ? '' : `<span class="outline-home" aria-hidden="true">${icon('E64C')}</span><span class="outline-row-tools">${iconButton('Видимость страницы', 'E651', { size: 24 })}${iconButton('Действия страницы', 'E9D9')}</span>`}
     </div>${item.children ? `<div id="branch-${item.id}"${expanded ? '' : ' hidden'}>${navigationRows(file, state, item.children, level + 1)}</div>` : ''}`;
   }).join('');
 }
@@ -32,14 +32,14 @@ function expandAllButton(state) {
 
 export function renderOutline(file, state) {
   const doc = file.type === 'sabydoc';
-  const title = doc ? 'Оглавление' : 'Страницы';
+  const title = doc ? 'Оглавление' : file.type === 'pptx' ? 'Слайды' : 'Страницы';
   const docked = state.placement === 'docked';
   return `<aside class="viewer-outline" aria-label="${title}" data-outline="${file.type}" data-placement="${state.placement}">
     <button type="button" class="outline-trigger" data-action="outline-open" aria-label="Открыть ${title.toLowerCase()}" aria-expanded="${state.placement !== 'collapsed'}" aria-controls="outline-panel">
       <span class="outline-markers" aria-hidden="true">${flattenNavigation(file.navigation).map(item => `<span${state.selected === item.id ? ' class="selected"' : ''}></span>`).join('')}</span>
     </button>
     <div class="outline-flyout" id="outline-panel"${state.placement === 'collapsed' ? ' inert' : ''}>
-      <div class="outline-heading"><div class="outline-heading-title"><strong>${title}</strong>${doc ? expandAllButton(state) : iconButton('Добавить страницу', 'EADD', { className: 'outline-add' })}</div>
+      <div class="outline-heading"><div class="outline-heading-title"><strong>${title}</strong>${doc ? expandAllButton(state) : file.type === 'site' ? iconButton('Добавить страницу', 'EADD', { className: 'outline-add' }) : ''}</div>
         ${iconButton(docked ? 'Открепить панель' : 'Закрепить панель', docked ? 'EBFA' : 'EBFB', { size: 24, className: 'outline-pin', action: 'outline-pin', extra: `aria-pressed="${docked}"` })}
       </div>
       <nav class="outline-content" aria-label="${title}">${navigationRows(file, state)}</nav>
@@ -97,7 +97,7 @@ export function syncOutline(root, file, state) {
   });
 }
 
-export function bindOutline(root, file, state) {
+export function bindOutline(root, file, state, onSelect) {
   const outline = root.querySelector('.viewer-outline');
   if (!outline) return;
   let pointerInside = false;
@@ -130,8 +130,9 @@ export function bindOutline(root, file, state) {
     }
     if (action === 'outline-select') {
       state.selected = button.dataset.id;
-      if (file.type === 'site') root.querySelector('.site-page').dataset.page = state.selected;
-      else {
+      if (onSelect) onSelect(state.selected);
+      else if (file.type === 'site') root.querySelector('.site-page').dataset.page = state.selected;
+      else if (file.type === 'sabydoc') {
         const target = [...root.querySelectorAll(`[data-heading="${state.selected}"]`)].find(element => element.getClientRects().length);
         const workspace = root.querySelector('.document-paper');
         workspace.scrollTop += target.getBoundingClientRect().top - workspace.getBoundingClientRect().top - 12;

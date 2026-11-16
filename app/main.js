@@ -3,6 +3,7 @@ import { asset, icon, iconButton, messagesButton } from './ui.js';
 import { cardCommands, maxCardCommands, previewPanel } from './menus.js';
 import { bindFormattingToolbar, renderViewer, viewerMenu } from './viewer.js';
 import { bindOutline, createOutlineState, syncOutline } from './outline.js';
+import { bindFileContent, selectFileLocation } from './file-content.js';
 
 const registry = document.querySelector('#registry');
 const panels = document.querySelector('#panels');
@@ -178,6 +179,7 @@ function showViewer(file, mode, origin) {
   const contentScroll = viewerState?.file === file ? viewer.querySelector('.viewer-workspace').scrollTop : 0;
   viewerState?.cleanupOutline?.();
   viewerState?.cleanupFormatting?.();
+  viewerState?.cleanupContent?.();
   closePanel(false);
   if (!outlineStates.has(file.id)) outlineStates.set(file.id, createOutlineState(file));
   const outline = outlineStates.get(file.id);
@@ -186,8 +188,14 @@ function showViewer(file, mode, origin) {
   registry.inert = true;
   viewer.hidden = false;
   viewer.innerHTML = renderViewer(file, mode, outline);
-  viewerState.cleanupOutline = bindOutline(viewer, file, outline);
+  const navigate = id => {
+    outline.selected = id;
+    selectFileLocation(viewer, file, outline, id);
+    syncOutline(viewer, file, outline);
+  };
+  viewerState.cleanupOutline = bindOutline(viewer, file, outline, ['docx', 'pdf', 'pptx'].includes(file.type) ? navigate : undefined);
   viewerState.cleanupFormatting = bindFormattingToolbar(viewer);
+  viewerState.cleanupContent = bindFileContent(viewer, file, outline, navigate);
   viewer.querySelector('.viewer-workspace').scrollTop = contentScroll;
   viewer.querySelector('.viewer-close').focus({ preventScroll: true });
 }
@@ -196,6 +204,7 @@ function closeViewer() {
   const { origin } = viewerState;
   viewerState.cleanupOutline?.();
   viewerState.cleanupFormatting?.();
+  viewerState.cleanupContent?.();
   closePanel(false);
   viewerState = undefined;
   viewer.hidden = true;
@@ -221,7 +230,7 @@ function runCommand(id, file, trigger) {
     showViewer(file, 'read', viewerState.origin);
     return;
   }
-  if (id !== 'edit' || !file?.content) return;
+  if (!['edit', 'editor'].includes(id) || !file?.editable) return;
   const origin = viewerState?.origin ?? panelState?.trigger ?? trigger;
   showViewer(file, 'edit', origin);
 }
@@ -258,7 +267,7 @@ document.addEventListener('mousedown', event => {
   }
   const button = event.target.closest('button');
   if (!button || button.dataset.action) return;
-  const editsFile = button.dataset.command === 'edit' && commandFile(button)?.content;
+  const editsFile = ['edit', 'editor'].includes(button.dataset.command) && commandFile(button)?.editable;
   if (!editsFile) event.preventDefault();
 });
 document.addEventListener('click', event => {

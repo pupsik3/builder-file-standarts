@@ -8,7 +8,7 @@ const root = fileURLToPath(new URL('./app/', import.meta.url));
 const types = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml',
-  '.png': 'image/png', '.jpg': 'image/jpeg', '.ttf': 'font/ttf', '.webp': 'image/webp',
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.ttf': 'font/ttf', '.webp': 'image/webp', '.mp4': 'video/mp4',
 };
 
 createServer(async (request, response) => {
@@ -19,7 +19,23 @@ createServer(async (request, response) => {
       response.writeHead(404).end();
       return;
     }
-    response.writeHead(200, { 'Content-Type': types[extname(target)] ?? 'application/octet-stream' });
+    const contentType = types[extname(target)] ?? 'application/octet-stream';
+    if (extname(target) === '.mp4') {
+      const { size } = await stat(target);
+      const range = request.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
+      if (range) {
+        const start = Number(range[1]);
+        const end = Math.min(range[2] ? Number(range[2]) : size - 1, size - 1);
+        if (start >= size || end < start) {
+          response.writeHead(416, { 'Content-Range': `bytes */${size}` }).end();
+          return;
+        }
+        response.writeHead(206, { 'Content-Type': contentType, 'Accept-Ranges': 'bytes', 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': end - start + 1 });
+        createReadStream(target, { start, end }).pipe(response);
+        return;
+      }
+      response.writeHead(200, { 'Content-Type': contentType, 'Accept-Ranges': 'bytes', 'Content-Length': size });
+    } else response.writeHead(200, { 'Content-Type': contentType });
     createReadStream(target).pipe(response);
   } catch {
     response.writeHead(404).end();

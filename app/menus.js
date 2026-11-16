@@ -39,6 +39,10 @@ const viewerGroups = {
     read: ['share> edit download rename', 'favorite cut copy remove unpublish flag', 'discuss access'],
     edit: ['share> download rename', 'favorite cut copy remove unpublish flag', 'discuss access'],
   },
+  dashboard: {
+    read: previewGroups.dashboard.map(group => group.replace(/\bmove> ?/g, '')),
+    edit: ['share> download rename', 'favorite cut copy remove unpublish flag', 'discuss access history'],
+  },
 };
 
 export const maxCardCommands = 8;
@@ -72,7 +76,7 @@ function commandRow(entry, file) {
 }
 
 export function commandList(file, mode) {
-  const groups = mode ? viewerGroups[file.type][mode] : previewGroups[file.type];
+  const groups = mode ? viewerGroups[file.type]?.[mode] ?? previewGroups[file.type].map(group => group.replace(/\bmove> ?/g, '')) : previewGroups[file.type];
   return `<div class="command-scroll">${groups.map(group => `<div class="command-group">${group.split(' ').map(entry => commandRow(entry, file)).join('')}</div>`).join('<hr class="command-divider">')}
     ${mode ? `<div class="command-footer"><img src="${asset(file.type === 'diagram' ? 'b05e9.svg' : 'e0ddf.svg')}" alt=""></div>` : ''}</div>`;
 }
