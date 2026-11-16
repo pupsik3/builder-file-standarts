@@ -9,8 +9,8 @@ function officePages(file) {
   return `<main class="viewer-workspace office-workspace"><div class="office-pages">${[0, 1].map(index => {
     const target = `${file.type}-page-${index + 1}`;
     const content = file.type === 'pdf' ? `<div class="pdf-page-image page-image-${index + 1}"><img src="${asset(file.content)}" alt="Страница ${index + 1} документа ${file.name}"></div>` : `<div class="docx-flow">${docxPages[index].map(block => block.kind === 'p' ? `<p${block.bold ? ' class="docx-heading"' : ''}>${escape(block.text)}</p>` : `<${block.kind}${block.kind === 'ol' ? ` start="${block.start}"` : ''}><li>${escape(block.text)}</li></${block.kind}>`).join('')}</div>`;
-    const page = `<article class="office-page ${file.type}-page"${file.type !== 'pdf' ? ` data-page-target="${target}"` : ''} aria-label="Страница ${index + 1}">${content}</article>`;
-    return file.type === 'pdf' ? `<div class="office-page-slot" data-page-target="${target}">${page}</div>` : page;
+    const page = `<article class="office-page ${file.type}-page" aria-label="Страница ${index + 1}">${content}</article>`;
+    return `<div class="office-page-slot" data-page-target="${target}">${page}</div>`;
   }).join('')}</div></main>`;
 }
 
@@ -94,7 +94,7 @@ export function selectFileLocation(root, file, state, id) {
 }
 
 function bindContentRotation(root, file, state) {
-  if (!['pdf', 'photo'].includes(file.type)) return;
+  if (!['docx', 'pdf', 'photo'].includes(file.type)) return;
   const workspace = root.querySelector('.viewer-workspace');
   const photo = file.type === 'photo' ? workspace.querySelector('img') : undefined;
   const sync = () => {

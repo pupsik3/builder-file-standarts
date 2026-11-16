@@ -53,7 +53,7 @@ function header(file, editing) {
   const section = file.type === 'section';
   const doc = file.type === 'sabydoc';
   const rotating = ['docx', 'pdf', 'photo'].includes(file.type);
-  const canRotate = ['pdf', 'photo'].includes(file.type);
+  const canRotate = rotating;
   const search = ['docx', 'pdf', 'sheet'].includes(file.type);
   return `<header class="viewer-header">
     <div class="viewer-title">${file.icon && !['dashboard','section'].includes(file.type) ? icon(file.icon, 24) : ''}<span>${file.title ?? file.name}</span></div>
