@@ -239,10 +239,14 @@ button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent
 .outline-markers span { width: 24px; height: 2px; background: #ccc; }
 .outline-markers span:nth-child(n+4) { width: 20px; }
 .outline-markers span.selected { background: #cc3d00; }
-.outline-flyout { position: absolute; inset: 0 auto 8px 8px; display: flex; flex-direction: column; width: 350px; visibility: hidden; overflow: hidden; border-radius: 8px; background: white; }
-.viewer-outline[data-placement='overlay'] .outline-flyout { visibility: visible; box-shadow: 0 0 18px #0000001f; }
-.viewer-outline[data-placement='docked'] .outline-flyout { visibility: visible; }
-.viewer-outline[data-placement='overlay'] .outline-trigger { opacity: 0; pointer-events: none; }
+.outline-flyout { position: absolute; inset: 0 auto 8px 8px; display: flex; flex-direction: column; width: 350px; visibility: hidden; translate: calc(-100% - 8px) 0; pointer-events: none; overflow: hidden; border-radius: 8px; background: white; }
+.viewer-outline[data-placement='overlay'] .outline-flyout { visibility: visible; translate: 0 0; pointer-events: auto; box-shadow: 0 0 18px #0000001f; }
+.viewer-outline[data-placement='docked'] .outline-flyout { visibility: visible; translate: 0 0; pointer-events: auto; }
+@media (prefers-reduced-motion: no-preference) {
+  .outline-flyout { transition: translate 300ms cubic-bezier(.2, 0, .2, 1), visibility 0s 300ms; }
+  .viewer-outline:not([data-placement='collapsed']) .outline-flyout { transition-delay: 0s; }
+}
+.viewer-outline[data-placement='overlay'] .outline-trigger { opacity: 0; }
 .viewer-outline[data-placement='docked'] .outline-trigger { display: none; }
 .outline-heading { position: relative; display: flex; align-items: center; justify-content: space-between; flex: none; height: 44px; padding: 8px 52px 4px 12px; }
 .outline-heading-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
