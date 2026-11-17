@@ -43,6 +43,7 @@ button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent
 .tree-header .plain:is(:hover,:focus-visible,:active) .menu-hover { display: contents; }
 .tree-header img { width: 16px; height: 16px; }
 .tree-row { display: flex; align-items: center; gap: 4px; position: relative; height: 31px; padding: 0 12px 0 16px; border-radius: 4px; font-size: 16px; font-weight: 600; white-space: nowrap; }
+.tree-row + .tree-row { margin-top: 2px; }
 .tree-row-main { display: flex; align-items: center; gap: 4px; width: 100%; min-width: 0; height: 100%; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; }
 .tree-row-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .tree-row:is(:hover,:has(:focus-visible)) { background: #ebf4ff; }
@@ -258,7 +259,8 @@ button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent
 .outline-heading .outline-add:is(:hover,:focus-visible) { border-color: #d0d0d0; }
 .outline-heading .outline-add:active { border-color: #d0d0d0; background: #3333331a; }
 .outline-content { flex: 1; min-height: 0; padding: 0 4px; overflow: auto; scrollbar-width: thin; }
-.outline-row { position: relative; display: flex; align-items: center; height: 31px; min-width: 0; padding: 0 8px 0 calc(8px + var(--outline-level) * 20px); border-radius: 4px; }
+.outline-row { position: relative; display: flex; align-items: center; height: 31px; min-width: 0; margin-top: 2px; padding: 0 8px 0 calc(8px + var(--outline-level) * 20px); border-radius: 4px; }
+.outline-content > .outline-row:first-child { margin-top: 0; }
 .outline-row:is(:hover,:has(:focus-visible)), .outline-row.current { background: #ebf4ff; }
 .outline-row.current::before { content: ''; position: absolute; left: 0; width: 3px; height: 16px; border-radius: 4px; background: #cc3d00; }
 .outline-select { align-self: stretch; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0; border: 0; background: transparent; color: #000; text-align: left; font-size: 15px; letter-spacing: -.2115px; }
