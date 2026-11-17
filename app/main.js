@@ -1,9 +1,10 @@
-import { files } from './files.js';
+import { files, canReadFile } from './files.js';
 import { asset, icon, iconButton, messagesButton } from './ui.js';
 import { cardCommands, maxCardCommands, previewPanel } from './menus.js';
 import { bindFormattingToolbar, renderViewer, viewerMenu } from './viewer.js';
 import { bindOutline, createOutlineState, syncOutline } from './outline.js';
 import { bindFileContent, selectFileLocation } from './file-content.js';
+import { bindFileNavigation } from './file-navigation.js';
 
 const registry = document.querySelector('#registry');
 const panels = document.querySelector('#panels');
@@ -176,18 +177,29 @@ function openPreview(file, anchor, trigger) {
 }
 
 function showViewer(file, mode, origin) {
+  if (!canReadFile(file)) return;
+  const fileNavigation = viewerState?.fileNavigation ?? {
+    open: false,
+    scrollLeft: 0,
+    // Read the rendered registry so sorting/filtering has a single source of order.
+    files: [...registry.querySelectorAll('.file-card')]
+      .filter(card => card.getClientRects().length)
+      .map(card => fileById.get(card.dataset.file)).filter(Boolean),
+  };
+  if (mode === 'edit') fileNavigation.open = false;
   const contentScroll = viewerState?.file === file ? viewer.querySelector('.viewer-workspace').scrollTop : 0;
   viewerState?.cleanupOutline?.();
   viewerState?.cleanupFormatting?.();
   viewerState?.cleanupContent?.();
+  viewerState?.cleanupNavigation?.();
   closePanel(false);
   if (!outlineStates.has(file.id)) outlineStates.set(file.id, createOutlineState(file));
   const outline = outlineStates.get(file.id);
   if (outline.placement === 'overlay') outline.placement = 'collapsed';
-  viewerState = { file, mode, origin, outline };
+  viewerState = { file, mode, origin, outline, fileNavigation };
   registry.inert = true;
   viewer.hidden = false;
-  viewer.innerHTML = renderViewer(file, mode, outline);
+  viewer.innerHTML = renderViewer(file, mode, outline, fileNavigation);
   const navigate = id => {
     outline.selected = id;
     selectFileLocation(viewer, file, outline, id);
@@ -196,6 +208,15 @@ function showViewer(file, mode, origin) {
   viewerState.cleanupOutline = bindOutline(viewer, file, outline, ['docx', 'pdf', 'pptx'].includes(file.type) ? navigate : undefined);
   viewerState.cleanupFormatting = bindFormattingToolbar(viewer);
   viewerState.cleanupContent = bindFileContent(viewer, file, outline, navigate);
+  viewerState.cleanupNavigation = bindFileNavigation(viewer, fileNavigation, (id, action) => {
+    const next = fileNavigation.files.find(item => item.id === id);
+    if (!canReadFile(next) || next.id === viewerState.file.id || viewerState.mode !== 'read') return;
+    showViewer(next, 'read', origin);
+    const focusTarget = action === 'navigate-file'
+      ? viewer.querySelector('.file-preview[aria-current]')
+      : viewer.querySelector(`[data-action="${action}"]`) ?? viewer.querySelector('.file-nav-arrow');
+    focusTarget?.focus({ preventScroll: true });
+  });
   viewer.querySelector('.viewer-workspace').scrollTop = contentScroll;
   viewer.querySelector('.viewer-close').focus({ preventScroll: true });
 }
@@ -205,6 +226,7 @@ function closeViewer() {
   viewerState.cleanupOutline?.();
   viewerState.cleanupFormatting?.();
   viewerState.cleanupContent?.();
+  viewerState.cleanupNavigation?.();
   closePanel(false);
   viewerState = undefined;
   viewer.hidden = true;
@@ -245,7 +267,7 @@ registry.addEventListener('click', event => {
   const anchor = trigger?.closest('.file-card');
   if (!anchor) return;
   const file = fileById.get(anchor.dataset.file);
-  if (trigger.dataset.action === 'file-open' && file.content) showViewer(file, 'read', trigger);
+  if (trigger.dataset.action === 'file-open' && canReadFile(file)) showViewer(file, 'read', trigger);
   else if (panelState?.anchor === anchor && panelState.trigger === trigger) closePanel();
   else openPreview(file, anchor, trigger);
 });
@@ -278,6 +300,11 @@ document.addEventListener('click', event => {
 document.addEventListener('keydown', event => {
   if (event.key !== 'Escape') return;
   if (panelState) closePanel();
+  else if (viewerState?.mode === 'read' && viewerState.fileNavigation.open) {
+    const toggle = viewer.querySelector('.file-strip-toggle');
+    toggle.click();
+    toggle.focus({ preventScroll: true });
+  }
   else if (viewerState?.outline.placement === 'overlay' && viewer.querySelector('.viewer-outline')) {
     viewer.querySelector('.viewer-close').focus({ preventScroll: true });
     viewerState.outline.placement = 'collapsed';

@@ -3,6 +3,7 @@ import { commandList, panelClose } from './menus.js';
 import { flattenNavigation, renderOutline } from './outline.js';
 import { renderDocumentFlow } from './document.js';
 import { renderFileContent } from './file-content.js';
+import { renderFileNavigation } from './file-navigation.js';
 
 const readTools = [
   ['Ссылка/Поделиться', 'E6A7', 'share'], ['Скачать', 'E628', 'download'],
@@ -135,7 +136,7 @@ function workspace(file, editing, outlineState) {
   </div>`;
 }
 
-export function renderViewer(file, mode, outlineState) {
+export function renderViewer(file, mode, outlineState, navigation) {
   const editing = mode === 'edit';
   const hasOutline = file.type === 'sabydoc' || ['docx','pdf','pptx'].includes(file.type) || (file.type === 'site' && editing);
   const editTools = { site: siteTools, sabydoc: docEditTools, diagram: diagramEditTools, dashboard:[...siteTools.slice(0,3), ['Фильтр', 'E94C'], siteTools[5]] };
@@ -147,6 +148,7 @@ export function renderViewer(file, mode, outlineState) {
       ${workspace(file, editing, outlineState)}
       ${toolbar(tools, editing, file)}
     </div>
+    ${!editing && navigation ? renderFileNavigation(navigation.files, file.id, navigation) : ''}
   </section>`;
 }
 
