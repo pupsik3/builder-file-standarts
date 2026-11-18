@@ -1,9 +1,11 @@
-import { asset, icon, iconButton, messagesButton } from './ui.js';
+import { asset, icon, iconButton, messagesButton, saveFileButton, viewerClose } from './ui.js';
 import { commandList, panelClose } from './menus.js';
 import { flattenNavigation, renderOutline } from './outline.js';
 import { renderDocumentFlow } from './document.js';
 import { renderFileContent } from './file-content.js';
 import { renderFileNavigation } from './file-navigation.js';
+import { browserEditorEntry } from './files.js';
+import { renderBrowserEditor } from './browser-editor.js';
 
 const readTools = [
   ['Ссылка/Поделиться', 'E6A7', 'share'], ['Скачать', 'E628', 'download'],
@@ -56,6 +58,10 @@ function header(file, editing) {
   const rotating = ['docx', 'pdf', 'photo'].includes(file.type);
   const canRotate = rotating;
   const search = ['docx', 'pdf', 'sheet'].includes(file.type);
+  const entry = browserEditorEntry[file.type];
+  const editAttributes = entry === 'chooser'
+    ? 'data-action="editor-choice" aria-haspopup="dialog" aria-expanded="false"'
+    : entry === 'direct' ? 'data-action="open-browser-editor"' : 'data-command="edit"';
   return `<header class="viewer-header">
     <div class="viewer-title">${file.icon && !['dashboard','section'].includes(file.type) ? icon(file.icon, 24) : ''}<span>${file.title ?? file.name}</span></div>
     <div class="viewer-center">${site || section || (dashboard && editing) ? deviceSwitch() : editing && file.type === 'diagram' ? drawingTools() : ''}</div>
@@ -64,8 +70,8 @@ function header(file, editing) {
       ${editing ? `<div class="editor-history">${iconButton('Отменить', 'E6CF', { size: 20 })}${iconButton('Повторить', 'E6CA', { size: 20 })}${doc ? '' : iconButton('Сбросить', 'E629', { size: 20, extra: 'disabled' })}${site ? iconButton('Предпросмотр', 'EAB9', { size: 20 }) : ''}</div>` : ''}
       ${dashboard && !editing ? '' : zoom(100)}
       ${(!editing || doc) && !dashboard ? lastRevision() : ''}
-      ${dashboard && !editing ? '' : editing ? `<button class="header-pill save" type="button" data-command="save">Сохранить <span>${icon('E75E', 16)}</span></button>` : `<button class="header-pill edit" type="button" data-command="edit">Изменить ${icon('E660', 16)}</button>`}
-      <button class="viewer-close" type="button" data-action="viewer-close" aria-label="Закрыть окно конструктора"><img src="${asset('da5ab.svg')}" alt=""></button>
+      ${(dashboard && !editing) || file.type === 'pdf' ? '' : editing ? saveFileButton() : `<button class="header-pill edit" type="button" ${editAttributes}>Изменить ${icon('E660', 16)}</button>`}
+      ${viewerClose()}
     </div>
   </header>`;
 }
@@ -122,8 +128,8 @@ export function bindFormattingToolbar(root) {
   return () => observer.disconnect();
 }
 
-function workspace(file, editing, outlineState) {
-  if (!['site','sabydoc','diagram'].includes(file.type)) return renderFileContent(file, editing, outlineState);
+function workspace(file, editing, outlineState, content) {
+  if (!['site','sabydoc','diagram'].includes(file.type)) return renderFileContent(file, editing, outlineState, content);
   if (file.type === 'site') return `<main class="viewer-workspace site-workspace"><div class="site-page" data-page="${outlineState.selected}"><img src="${asset(file.content)}" alt="Страница сайта"></div></main>`;
   if (file.type === 'diagram') {
     return `<main class="viewer-workspace diagram-workspace" style="--diagram-grid:url('${asset(file.content.grid)}')"><div class="diagram-canvas" role="img" aria-label="Две фигуры, соединённые стрелкой">
@@ -136,8 +142,9 @@ function workspace(file, editing, outlineState) {
   </div>`;
 }
 
-export function renderViewer(file, mode, outlineState, navigation) {
+export function renderViewer(file, mode, outlineState, navigation, content, draft) {
   const editing = mode === 'edit';
+  if (editing && draft) return renderBrowserEditor(file, outlineState, draft);
   const hasOutline = file.type === 'sabydoc' || ['docx','pdf','pptx'].includes(file.type) || (file.type === 'site' && editing);
   const editTools = { site: siteTools, sabydoc: docEditTools, diagram: diagramEditTools, dashboard:[...siteTools.slice(0,3), ['Фильтр', 'E94C'], siteTools[5]] };
   const tools = editing ? editTools[file.type] : file.type === 'sabydoc' ? docReadTools : file.type === 'dashboard' ? [['Перейти в редактор','E747','editor'], ...readTools] : readTools;
@@ -145,7 +152,7 @@ export function renderViewer(file, mode, outlineState, navigation) {
     ${header(file, editing)}
     <div class="viewer-main${hasOutline ? ' has-outline' : ''}"${hasOutline ? ` data-outline-placement="${outlineState.placement}"` : ''}>
       ${hasOutline ? renderOutline(file, outlineState) : ''}
-      ${workspace(file, editing, outlineState)}
+      ${workspace(file, editing, outlineState, content)}
       ${toolbar(tools, editing, file)}
     </div>
     ${!editing && navigation ? renderFileNavigation(navigation.files, file.id, navigation) : ''}

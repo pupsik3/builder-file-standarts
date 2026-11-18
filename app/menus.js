@@ -85,6 +85,24 @@ export function panelClose(viewer) {
   return `<button type="button" class="panel-close" data-action="panel-close" aria-label="${viewer ? 'Закрыть меню' : 'Закрыть превью'}"><img src="${asset(viewer ? '02939.svg' : '3ad71.svg')}" alt=""></button>`;
 }
 
+const editorApps = { docx: 'Microsoft Word', pptx: 'Microsoft PowerPoint', sheet: 'Microsoft Excel' };
+
+export function editorChoicePanel(file) {
+  const app = editorApps[file.type];
+  const rows = [
+    [app ? `В приложении ${app}` : 'В приложении', file.icon ?? 'E72A', false],
+    [app ? 'В браузере в MS Office' : 'В браузере', 'EB5C', true],
+    ...(app ? [['OnlyOffice', '', false], ['Google Docs', '', false]] : []),
+  ];
+  return `<section class="floating-panel editor-choice" role="dialog" aria-labelledby="editor-choice-title" data-type="${file.type}">
+    <h2 id="editor-choice-title">Редактировать</h2>
+    <button type="button" class="panel-close" data-action="panel-close" aria-label="Закрыть меню"><img src="${asset('5ae62.svg')}" alt=""></button>
+    <div class="command-group">${rows.map(([label, glyph, available]) => `
+      <div class="command-row"><button type="button" class="command-button"
+        ${available ? 'data-action="open-browser-editor"' : 'aria-disabled="true"'}>${glyph ? icon(glyph, 24) : '<span class="editor-choice-spacer" aria-hidden="true"></span>'}<span>${label}</span></button></div>`).join('')}</div>
+  </section>`;
+}
+
 export function previewPanel(file) {
   return `<section class="floating-panel preview-panel" role="dialog" aria-label="Действия с файлом ${file.name}" data-preview="${file.id}" data-type="${file.type}">
     <div class="preview-body"><figure class="preview-figure"><div class="preview-image"><img src="${asset(file.preview)}" alt=""></div><figcaption>${file.name}</figcaption></figure>${commandList(file)}</div>

@@ -5,6 +5,6 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test app/file-navigation.test.js",
-    "check": "node --check server.js && node --check app/main.js && node --check app/files.js && node --check app/ui.js && node --check app/menus.js && node --check app/viewer.js && node --check app/outline.js && node --check app/document.js && node --check app/file-content.js && node --check app/dashboard.js && node --check app/office-pages.js && node --check app/sheet-data.js && node --check app/file-navigation.js"
+    "check": "node --check server.js && node --check app/main.js && node --check app/files.js && node --check app/ui.js && node --check app/menus.js && node --check app/viewer.js && node --check app/outline.js && node --check app/document.js && node --check app/file-content.js && node --check app/dashboard.js && node --check app/office-pages.js && node --check app/sheet-data.js && node --check app/file-navigation.js && node --check app/browser-editor.js && node --check app/office-ribbon.js"
   }
 }

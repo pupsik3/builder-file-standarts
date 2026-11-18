@@ -33,4 +33,8 @@ const navigation = {
 const readerTypes = new Set(['video', 'photo', 'sabydoc', 'site', 'sheet', 'pdf', 'docx', 'diagram', 'pptx', 'dashboard', 'section']);
 export const canReadFile = file => Boolean(file?.content && readerTypes.has(file.type));
 
+export const browserEditorEntry = Object.freeze({
+  docx: 'chooser', pptx: 'chooser', sheet: 'chooser', photo: 'chooser', video: 'direct',
+});
+
 export const files = records.map(file => ({ preview: file.thumbnail, ...file, editable: ['site', 'sabydoc', 'diagram', 'dashboard'].includes(file.type), navigation: navigation[file.type] }));

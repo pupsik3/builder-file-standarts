@@ -1,10 +1,11 @@
-import { files, canReadFile } from './files.js';
+import { files, canReadFile, browserEditorEntry } from './files.js';
 import { asset, icon, iconButton, messagesButton } from './ui.js';
-import { cardCommands, maxCardCommands, previewPanel } from './menus.js';
+import { cardCommands, maxCardCommands, previewPanel, editorChoicePanel } from './menus.js';
 import { bindFormattingToolbar, renderViewer, viewerMenu } from './viewer.js';
 import { bindOutline, createOutlineState, syncOutline } from './outline.js';
 import { bindFileContent, selectFileLocation } from './file-content.js';
 import { bindFileNavigation } from './file-navigation.js';
+import { bindBrowserEditor } from './browser-editor.js';
 
 const registry = document.querySelector('#registry');
 const panels = document.querySelector('#panels');
@@ -140,9 +141,11 @@ updateCardCommands();
 let panelState;
 let viewerState;
 const outlineStates = new Map();
+const savedContent = new Map();
 
 function positionPanel() {
   if (!panelState) return;
+  if (panelState.surface === 'editor-choice') return;
   const { anchor, element } = panelState;
   const rect = anchor.getBoundingClientRect();
   if (panelState.surface === 'viewer') {
@@ -178,6 +181,9 @@ function openPreview(file, anchor, trigger) {
 
 function showViewer(file, mode, origin) {
   if (!canReadFile(file)) return;
+  if (mode === 'edit' && !file.editable && !browserEditorEntry[file.type]) return;
+  const content = savedContent.get(file.id) ?? {};
+  const draft = mode === 'edit' && browserEditorEntry[file.type] ? structuredClone(content) : undefined;
   const fileNavigation = viewerState?.fileNavigation ?? {
     open: false,
     scrollLeft: 0,
@@ -191,15 +197,16 @@ function showViewer(file, mode, origin) {
   viewerState?.cleanupOutline?.();
   viewerState?.cleanupFormatting?.();
   viewerState?.cleanupContent?.();
+  viewerState?.editor?.cleanup();
   viewerState?.cleanupNavigation?.();
   closePanel(false);
   if (!outlineStates.has(file.id)) outlineStates.set(file.id, createOutlineState(file));
   const outline = outlineStates.get(file.id);
   if (outline.placement === 'overlay') outline.placement = 'collapsed';
-  viewerState = { file, mode, origin, outline, fileNavigation };
+  viewerState = { file, mode, origin, outline, fileNavigation, draft };
   registry.inert = true;
   viewer.hidden = false;
-  viewer.innerHTML = renderViewer(file, mode, outline, fileNavigation);
+  viewer.innerHTML = renderViewer(file, mode, outline, fileNavigation, content, draft);
   const navigate = id => {
     outline.selected = id;
     selectFileLocation(viewer, file, outline, id);
@@ -207,7 +214,9 @@ function showViewer(file, mode, origin) {
   };
   viewerState.cleanupOutline = bindOutline(viewer, file, outline, ['docx', 'pdf', 'pptx'].includes(file.type) ? navigate : undefined);
   viewerState.cleanupFormatting = bindFormattingToolbar(viewer);
-  viewerState.cleanupContent = bindFileContent(viewer, file, outline, navigate);
+  const editor = draft ? bindBrowserEditor(viewer, file, outline, draft) : undefined;
+  viewerState.editor = editor;
+  viewerState.cleanupContent = bindFileContent(viewer, file, outline, navigate, draft ?? content, editor);
   viewerState.cleanupNavigation = bindFileNavigation(viewer, fileNavigation, (id, action) => {
     const next = fileNavigation.files.find(item => item.id === id);
     if (!canReadFile(next) || next.id === viewerState.file.id || viewerState.mode !== 'read') return;
@@ -226,6 +235,7 @@ function closeViewer() {
   viewerState.cleanupOutline?.();
   viewerState.cleanupFormatting?.();
   viewerState.cleanupContent?.();
+  viewerState.editor?.cleanup();
   viewerState.cleanupNavigation?.();
   closePanel(false);
   viewerState = undefined;
@@ -249,12 +259,41 @@ function toggleViewerMenu(trigger) {
 
 function runCommand(id, file, trigger) {
   if (id === 'save' && viewerState?.file === file && viewerState.mode === 'edit') {
+    if (viewerState.draft) {
+      viewerState.editor.commit();
+      savedContent.set(file.id, viewerState.draft);
+      if (file.type === 'photo') delete viewerState.outline.rotation;
+    }
     showViewer(file, 'read', viewerState.origin);
     return;
   }
   if (!['edit', 'editor'].includes(id) || !file?.editable) return;
   const origin = viewerState?.origin ?? panelState?.trigger ?? trigger;
   showViewer(file, 'edit', origin);
+}
+
+function toggleEditorChoice(trigger) {
+  if (panelState?.trigger === trigger) {
+    closePanel();
+    return;
+  }
+  closePanel(false);
+  const { file } = viewerState;
+  panels.innerHTML = editorChoicePanel(file);
+  panelState = { surface: 'editor-choice', file, anchor: trigger, trigger, element: panels.firstElementChild };
+  trigger.setAttribute('aria-expanded', 'true');
+  panelState.element.querySelector('[data-action="open-browser-editor"]').focus({ preventScroll: true });
+}
+
+function openBrowserEditor(trigger) {
+  if (viewerState?.mode !== 'read') return;
+  const { file, origin } = viewerState;
+  const entry = browserEditorEntry[file.type];
+  const fromVideo = entry === 'direct' && viewer.contains(trigger);
+  const fromChooser = entry === 'chooser' && panelState?.surface === 'editor-choice' && panelState.element.contains(trigger);
+  if (fromVideo || fromChooser) {
+    showViewer(file, 'edit', origin);
+  }
 }
 
 function commandFile(command) {
@@ -275,10 +314,31 @@ viewer.addEventListener('click', event => {
   const action = event.target.closest('[data-action]');
   if (action?.dataset.action === 'viewer-close') closeViewer();
   if (action?.dataset.action === 'viewer-menu') toggleViewerMenu(action);
+  if (action?.dataset.action === 'editor-choice') toggleEditorChoice(action);
+  if (action?.dataset.action === 'open-browser-editor') openBrowserEditor(action);
 });
 panels.addEventListener('click', event => {
-  if (event.target.closest('[data-action="panel-close"]')) closePanel();
+  if (event.target.closest('[data-action="panel-close"]')) {
+    closePanel();
+    return;
+  }
+  const entry = event.target.closest('[data-action="open-browser-editor"]');
+  if (entry) {
+    openBrowserEditor(entry);
+    return;
+  }
+  if (panelState?.surface !== 'editor-choice' || event.target.closest('button')) return;
+  // The chooser overlays the header. Its empty upper area releases the trigger
+  // when the user repeats the same pointer click.
+  const rect = panelState.trigger.getBoundingClientRect();
+  if (event.detail && event.clientX >= rect.left && event.clientX <= rect.right &&
+      event.clientY >= rect.top && event.clientY <= rect.bottom) closePanel();
 });
+document.addEventListener('click', event => {
+  if (panelState?.surface !== 'editor-choice') return;
+  const { element, trigger } = panelState;
+  if (!element.contains(event.target) && !trigger.contains(event.target)) closePanel();
+}, { capture: true });
 document.addEventListener('mousedown', event => {
   const checkbox = event.target.closest('.card-select input');
   if (checkbox) {

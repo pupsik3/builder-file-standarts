@@ -3,13 +3,31 @@ import { docxPages } from './office-pages.js';
 import { sheets } from './sheet-data.js';
 import { renderDashboard } from './dashboard.js';
 
-const escape = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+export const escape = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 
-function officePages(file) {
+export function docxPageBlocks(index, content) {
+  return docxPages[index].map((block, number) => ({
+    ...block,
+    text: content?.paragraphs?.[`${index}:${number}`] ?? block.text,
+  }));
+}
+
+function docxFlow(index, content, editing) {
+  return `<div class="docx-flow">${docxPageBlocks(index, content).map((block, number) => {
+    const attrs = editing ? ` contenteditable="plaintext-only" role="textbox" aria-multiline="true" aria-label="Страница ${index + 1}, блок ${number + 1}" data-paragraph="${index}:${number}"` : '';
+    if (block.kind === 'p') return `<p${block.bold ? ' class="docx-heading"' : ''}${attrs}>${escape(block.text)}</p>`;
+    const list = block.kind;
+    return `<${list}${list === 'ol' ? ` start="${block.start}"` : ''}><li${attrs}>${escape(block.text)}</li></${list}>`;
+  }).join('')}</div>`;
+}
+
+export function officePages(file, content, editing = false) {
   return `<main class="viewer-workspace office-workspace"><div class="office-pages">${[0, 1].map(index => {
     const target = `${file.type}-page-${index + 1}`;
-    const content = file.type === 'pdf' ? `<div class="pdf-page-image page-image-${index + 1}"><img src="${asset(file.content)}" alt="Страница ${index + 1} документа ${file.name}"></div>` : `<div class="docx-flow">${docxPages[index].map(block => block.kind === 'p' ? `<p${block.bold ? ' class="docx-heading"' : ''}>${escape(block.text)}</p>` : `<${block.kind}${block.kind === 'ol' ? ` start="${block.start}"` : ''}><li>${escape(block.text)}</li></${block.kind}>`).join('')}</div>`;
-    const page = `<article class="office-page ${file.type}-page" aria-label="Страница ${index + 1}">${content}</article>`;
+    const body = file.type === 'pdf'
+      ? `<div class="pdf-page-image page-image-${index + 1}"><img src="${asset(file.content)}" alt="Страница ${index + 1} документа ${file.name}"></div>`
+      : docxFlow(index, content, editing);
+    const page = `<article class="office-page ${file.type}-page" aria-label="Страница ${index + 1}">${body}</article>`;
     return `<div class="office-page-slot" data-page-target="${target}">${page}</div>`;
   }).join('')}</div></main>`;
 }
@@ -25,7 +43,7 @@ function presentation(file, state) {
     </nav></main>`;
 }
 
-function sheetTable(sheet) {
+function sheetTable(sheet, content, editing) {
   const columnCount = 26;
   const widths = Array.from({ length: columnCount }, (_, i) => {
     const column = sheet.columns.find(c => i + 1 >= Number(c.min) && i + 1 <= Number(c.max));
@@ -39,33 +57,35 @@ function sheetTable(sheet) {
       if (merged && j > 0 && j < dataColumns) return '';
       const ref = `${String.fromCharCode(65 + j)}${i + 1}`;
       const cell = row?.cells.find(c => c.ref === ref);
-      let value = cell?.value ?? '';
+      let value = content?.cells?.[sheet.id]?.[ref] ?? cell?.value ?? '';
       if (sheet.name === 'Воронка' && j === 7 && i >= 4 && i <= 9 && value !== '') value = `${(Number(value) * 100).toFixed(1)}%`;
-      const numeric = value !== '' && Number.isFinite(Number(cell?.value));
+      const numeric = value !== '' && Number.isFinite(Number(value));
       const cls = j >= dataColumns || i > 9 ? '' : i === 0 ? 'sheet-title' : i === 1 ? 'sheet-note' : i === 3 || i === 9 ? 'sheet-emphasis' : i >= 4 ? `sheet-data${i % 2 ? ' striped' : ''}${numeric ? ' numeric' : ''}${['6','7'].includes(cell?.style) ? ' sheet-blue' : ''}` : '';
-      return `<td class="${cls}${ref === 'A1' ? ' active-cell' : ''}"${merged && j === 0 ? ` colspan="${dataColumns}"` : ''}>${escape(value)}</td>`;
+      const address = editing ? ` data-cell="${ref}" tabindex="${ref === 'A1' ? '0' : '-1'}" aria-label="${ref}, ${escape(value)}"` : '';
+      return `<td class="${cls}${ref === 'A1' ? ' active-cell' : ''}"${address}${merged && j === 0 ? ` colspan="${dataColumns}"` : ''}>${escape(value)}</td>`;
     }).join('')}</tr>`;
   }).join('')}</tbody></table>`;
 }
 
-function spreadsheet(state) {
+export function spreadsheet(state, content, editing = false) {
   const sheet = sheets.find(item => item.id === state.sheet) ?? sheets[0];
-  return `<main class="viewer-workspace sheet-workspace"><div class="sheet-scroll" tabindex="0" aria-label="Лист ${sheet.name}">${sheetTable(sheet)}</div><nav class="sheet-tabs" aria-label="Листы книги"><span class="sheet-tab-arrows" aria-hidden="true">‹　‹　›　›</span>${sheets.map(item => `<button type="button" data-action="sheet-select" data-id="${item.id}" aria-pressed="${item.id === sheet.id}">${item.name}</button>`).join('')}</nav></main>`;
+  const formula = editing ? `<form class="sheet-formula" aria-label="Строка формул"><label for="cell-value" title="Значение ячейки">ƒx</label><input id="cell-value" aria-label="Значение ячейки" autocomplete="off" spellcheck="false"></form>` : '';
+  return `<main class="viewer-workspace sheet-workspace">${formula}<div class="sheet-scroll" tabindex="0" aria-label="Лист ${sheet.name}">${sheetTable(sheet, content, editing)}</div><nav class="sheet-tabs" aria-label="Листы книги"><span class="sheet-tab-arrows" aria-hidden="true">‹　‹　›　›</span>${sheets.map(item => `<button type="button" data-action="sheet-select" data-id="${item.id}" aria-pressed="${item.id === sheet.id}">${item.name}</button>`).join('')}${editing ? '<button class="sheet-add" type="button" aria-disabled="true" aria-label="Добавить лист">⊕</button>' : ''}</nav></main>`;
 }
 
-function video(file) {
+export function video(file, editing = false) {
   return `<main class="viewer-workspace video-workspace"><div class="video-player"><video src="${asset(file.content)}" width="1920" height="1080" preload="metadata" playsinline aria-label="Видео.mp4"></video>
     <div class="video-controls"><input class="video-progress" type="range" min="0" max="0" step="0.01" value="0" aria-label="Позиция воспроизведения"><div class="video-control-row">
       <button type="button" class="video-step" aria-label="Назад">◀◀</button><button type="button" class="video-play" data-action="video-play" aria-label="Воспроизвести">▶</button><button type="button" class="video-step" aria-label="Вперёд">▶▶</button>
-      <button type="button" class="video-rate" aria-label="Скорость воспроизведения 1x">1x</button><div class="video-sound"><button type="button" data-action="video-mute" aria-label="Выключить звук"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 6h3l3-3v10l-3-3H2V6Z" fill="currentColor"/><path d="M10 5c2 2 2 4 0 6m2-8c3 3 3 7 0 10" stroke="currentColor" stroke-linecap="round"/></svg></button><input class="video-volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Громкость"></div>
-      <output class="video-time" aria-live="off">0:00 / 0:00</output><span class="video-control-spacer"></span><button type="button" aria-label="Снимок кадра"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 5h3l1-2h4l1 2h3v8H2V5Z" stroke="currentColor"/><circle cx="8" cy="8.5" r="2.5" stroke="currentColor"/></svg></button><button type="button" data-action="video-fullscreen" aria-label="Полный экран" aria-pressed="false">⛶</button></div></div>
+      ${editing ? '' : '<button type="button" class="video-rate" aria-label="Скорость воспроизведения 1x">1x</button>'}<div class="video-sound"><button type="button" data-action="video-mute" aria-label="Выключить звук"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 6h3l3-3v10l-3-3H2V6Z" fill="currentColor"/><path d="M10 5c2 2 2 4 0 6m2-8c3 3 3 7 0 10" stroke="currentColor" stroke-linecap="round"/></svg></button><input class="video-volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Громкость"></div>
+      <output class="video-time" aria-live="off">0:00 / 0:00</output><span class="video-control-spacer"></span>${editing ? `<span class="video-editor-chevron" aria-hidden="true">${icon('EB8A')}</span>` : `<button type="button" aria-label="Снимок кадра"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 5h3l1-2h4l1 2h3v8H2V5Z" stroke="currentColor"/><circle cx="8" cy="8.5" r="2.5" stroke="currentColor"/></svg></button><button type="button" data-action="video-fullscreen" aria-label="Полный экран" aria-pressed="false">⛶</button>`}</div></div>
     <p class="video-error" hidden>Не удалось воспроизвести видео.</p></div></main>`;
 }
 
-export function renderFileContent(file, editing, state) {
-  if (['docx', 'pdf'].includes(file.type)) return officePages(file);
+export function renderFileContent(file, editing, state, content) {
+  if (['docx', 'pdf'].includes(file.type)) return officePages(file, content);
   if (file.type === 'pptx') return presentation(file, state);
-  if (file.type === 'sheet') return spreadsheet(state);
+  if (file.type === 'sheet') return spreadsheet(state, content);
   if (file.type === 'photo') return `<main class="viewer-workspace photo-workspace"><img src="${asset(file.content)}" alt="Абстрактная композиция из округлых форм в кремовых, терракотовых и серых тонах"></main>`;
   if (file.type === 'video') return video(file);
   if (file.type === 'section') return `<main class="viewer-workspace section-workspace"><article class="section-content"><div class="section-copy"><h1>Начните с того, что интересно, и найдите свой путь среди историй, тем и деталей</h1><p>Здесь собраны истории, материалы и детали, из которых складывается общая картина. Выберите направление и исследуйте дальше</p><button type="button" class="section-learn">Узнать больше</button><div class="section-author"><div class="section-avatar"><img src="${asset(file.content)}" alt=""></div><div><strong>Алексей</strong><small>Специалист поддержки, перезвонит в течение 10 минут</small></div></div></div><div class="section-photo"><img src="${asset(file.content)}" alt="Тёмные листья"></div></article></main>`;
@@ -81,7 +101,10 @@ export function selectFileLocation(root, file, state, id) {
     const image = root.querySelector('.slide-image');
     image.src = asset(file.content[index]);
     image.alt = `Слайд ${index + 1} из ${file.content.length}`;
-    root.querySelector('[data-action="slide-prev"]').disabled = index === 0;
+    const previous = root.querySelector('[data-action="slide-prev"]');
+    if (previous) previous.disabled = index === 0;
+    const count = root.querySelector('.editor-slide-count');
+    if (count) count.textContent = `Слайд ${index + 1} из ${file.content.length}`;
     root.querySelectorAll('[data-action="slide-select"]').forEach(button => {
       if (button.dataset.id === id) button.setAttribute('aria-current', 'page');
       else button.removeAttribute('aria-current');
@@ -93,37 +116,52 @@ export function selectFileLocation(root, file, state, id) {
   }
 }
 
-function bindContentRotation(root, file, state) {
+export function fitPhoto(workspace, photo, degrees, zoom = 1) {
+  workspace.dataset.rotation = degrees;
+  workspace.style.setProperty('--content-rotation', `${degrees}deg`);
+  if (!photo.naturalWidth || !photo.naturalHeight) return;
+  const style = getComputedStyle(workspace);
+  const width = workspace.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const height = workspace.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+  const sideways = degrees % 180 !== 0;
+  const rotatedWidth = sideways ? photo.naturalHeight : photo.naturalWidth;
+  const rotatedHeight = sideways ? photo.naturalWidth : photo.naturalHeight;
+  const fit = Math.max(0, Math.min(1, width / rotatedWidth, height / rotatedHeight)) * zoom;
+  photo.style.width = `${photo.naturalWidth * fit}px`;
+  photo.style.height = `${photo.naturalHeight * fit}px`;
+}
+
+function bindContentRotation(root, file, state, content) {
   if (!['docx', 'pdf', 'photo'].includes(file.type)) return;
   const workspace = root.querySelector('.viewer-workspace');
   const photo = file.type === 'photo' ? workspace.querySelector('img') : undefined;
+  const pages = [...workspace.querySelectorAll('.docx-page')];
+  const baseRotation = content?.rotation ?? 0;
   const sync = () => {
-    const degrees = state.rotation ?? 0;
+    const degrees = state.rotation ?? baseRotation;
+    if (photo) {
+      fitPhoto(workspace, photo, degrees);
+      return;
+    }
     const sideways = degrees % 180 !== 0;
     workspace.dataset.rotation = degrees;
     workspace.style.setProperty('--content-rotation', `${degrees}deg`);
-    if (!photo) {
-      workspace.style.setProperty('--page-inline-size', `${sideways ? 1159 : 876}px`);
-      workspace.style.setProperty('--page-block-size', `${sideways ? 876 : 1159}px`);
-      return;
+    workspace.style.setProperty('--page-inline-size', `${sideways ? Math.max(1159, ...pages.map(page => page.offsetHeight)) : 876}px`);
+    workspace.style.setProperty('--page-block-size', `${sideways ? 876 : 1159}px`);
+    for (const page of pages) {
+      const slot = page.parentElement;
+      slot.style.width = `${sideways ? page.offsetHeight : 876}px`;
+      slot.style.height = `${sideways ? 876 : page.offsetHeight}px`;
     }
-    if (!photo.naturalWidth || !photo.naturalHeight) return;
-    const style = getComputedStyle(workspace);
-    const width = workspace.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-    const height = workspace.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
-    const rotatedWidth = sideways ? photo.naturalHeight : photo.naturalWidth;
-    const rotatedHeight = sideways ? photo.naturalWidth : photo.naturalHeight;
-    const fit = Math.max(0, Math.min(1, width / rotatedWidth, height / rotatedHeight));
-    photo.style.width = `${photo.naturalWidth * fit}px`;
-    photo.style.height = `${photo.naturalHeight * fit}px`;
   };
-  const observer = photo ? new ResizeObserver(sync) : undefined;
-  observer?.observe(workspace);
+  const observer = photo || pages.length ? new ResizeObserver(sync) : undefined;
+  if (photo) observer.observe(workspace);
+  pages.forEach(page => observer.observe(page));
   photo?.addEventListener('load', sync);
   sync();
   return {
     rotate(direction) {
-      state.rotation = ((state.rotation ?? 0) + direction * 90 + 360) % 360;
+      state.rotation = ((state.rotation ?? baseRotation) + direction * 90 + 360) % 360;
       sync();
     },
     cleanup() {
@@ -133,8 +171,8 @@ function bindContentRotation(root, file, state) {
   };
 }
 
-export function bindFileContent(root, file, state, onNavigate) {
-  const rotation = bindContentRotation(root, file, state);
+export function bindFileContent(root, file, state, onNavigate, content, editor) {
+  const rotation = editor ? undefined : bindContentRotation(root, file, state, content);
   const handleClick = event => {
     const action = event.target.closest('[data-action]');
     if (!action) return;
@@ -152,10 +190,11 @@ export function bindFileContent(root, file, state, onNavigate) {
       const scroll = root.querySelector('.sheet-scroll');
       state.sheetScroll[state.sheet ?? sheets[0].id] = [scroll.scrollLeft, scroll.scrollTop];
       state.sheet = sheet.id;
-      scroll.innerHTML = sheetTable(sheet);
+      scroll.innerHTML = sheetTable(sheet, content, Boolean(editor));
       scroll.setAttribute('aria-label', `Лист ${sheet.name}`);
       [scroll.scrollLeft, scroll.scrollTop] = state.sheetScroll[sheet.id] ?? [0, 0];
-      root.querySelectorAll('.sheet-tabs button').forEach(button => button.setAttribute('aria-pressed', button.dataset.id === sheet.id));
+      root.querySelectorAll('[data-action="sheet-select"]').forEach(button => button.setAttribute('aria-pressed', button.dataset.id === sheet.id));
+      editor?.sheetChanged();
     }
   };
   root.addEventListener('click', handleClick);
@@ -209,6 +248,7 @@ export function bindFileContent(root, file, state, onNavigate) {
   const fullscreenChange = () => {
     const fullscreen = document.fullscreenElement === player;
     const button = player.querySelector('[data-action="video-fullscreen"]');
+    if (!button) return;
     button.setAttribute('aria-pressed', fullscreen);
     button.setAttribute('aria-label', fullscreen ? 'Выйти из полноэкранного режима' : 'Полный экран');
   };
