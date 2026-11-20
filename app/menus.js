@@ -11,7 +11,9 @@ const commands = {
   gpt: ['SabyGPT', 'E9E2'], draft: ['Сохранить черновиком', 'EA0F'],
 };
 
-const compare = new Set(['sabydoc', 'sheet', 'pdf', 'docx']);
+const compare = new Set(['sabydoc', 'sheet', 'pdf', 'docx', 'xml', 'html', 'txt']);
+const textCommands = 'favorite move> cut copy remove unpublish print flag sign> encrypt';
+const collaborationCommands = 'discuss access history';
 const previewGroups = {
   video: ['share> edit download rename', 'favorite move> cut copy remove unpublish flag sign> encrypt', 'discuss access history'],
   photo: ['share> edit download rename convert>', 'favorite move> cut copy remove unpublish print flag sign> encrypt', 'discuss access history properties'],
@@ -25,8 +27,17 @@ const previewGroups = {
   pptx: ['share> edit> download> rename', 'favorite move> cut copy remove unpublish print flag sign> encrypt', 'discuss access history'],
   dashboard: ['editor share> download rename', 'favorite move> cut copy remove unpublish flag', 'discuss access history'],
   section: ['share> edit download', 'favorite move> cut copy remove flag', 'discuss access history'],
+  link: ['share> download rename', 'favorite move> copy publish remove flag', 'access'],
+  audio: ['share> download> rename', 'favorite move> cut copy remove unpublish flag sign> encrypt', collaborationCommands],
+  xml: ['share> edit> download> rename', textCommands, collaborationCommands],
+  html: ['share> download> rename convert>', textCommands, collaborationCommands],
+  txt: ['share> edit> download> rename', textCommands, collaborationCommands],
 };
+const textViewer = { read: ['share> download', 'access history'] };
 const viewerGroups = {
+  xml: textViewer,
+  html: textViewer,
+  txt: textViewer,
   site: {
     read: ['share> edit download', 'favorite cut copy publish remove flag', 'discuss access history'],
     edit: ['share> download', 'favorite cut copy publish remove flag', 'discuss access history'],
@@ -105,7 +116,7 @@ export function editorChoicePanel(file) {
 
 export function previewPanel(file) {
   return `<section class="floating-panel preview-panel" role="dialog" aria-label="Действия с файлом ${file.name}" data-preview="${file.id}" data-type="${file.type}">
-    <div class="preview-body"><figure class="preview-figure"><div class="preview-image"><img src="${asset(file.preview)}" alt=""></div><figcaption>${file.name}</figcaption></figure>${commandList(file)}</div>
+    <div class="preview-body"><figure class="preview-figure"><div class="preview-image"><img src="${asset(file.preview)}" alt=""></div><figcaption title="${file.name}"><span>${file.name}</span></figcaption></figure>${commandList(file)}</div>
     ${panelClose(false)}
   </section>`;
 }

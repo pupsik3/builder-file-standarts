@@ -1,4 +1,5 @@
 export const asset = name => `./assets/${name}`;
+export const fileIconColor = file => file.color ?? (['site', 'dashboard', 'section'].includes(file.type) ? '#656c87' : '#2562aa');
 
 export function icon(code, size = 16) {
   return `<span class="icon${size === 24 ? ' icon-large' : ''}" style="--icon-size:${size}px" aria-hidden="true">&#x${code};</span>`;

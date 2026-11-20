@@ -1,11 +1,12 @@
 import { files, canReadFile, browserEditorEntry } from './files.js';
-import { asset, icon, iconButton, messagesButton } from './ui.js';
+import { asset, fileIconColor, icon, iconButton, messagesButton } from './ui.js';
 import { cardCommands, maxCardCommands, previewPanel, editorChoicePanel } from './menus.js';
 import { bindFormattingToolbar, renderViewer, viewerMenu } from './viewer.js';
 import { bindOutline, createOutlineState, syncOutline } from './outline.js';
 import { bindFileContent, selectFileLocation } from './file-content.js';
 import { bindFileNavigation } from './file-navigation.js';
 import { bindBrowserEditor } from './browser-editor.js';
+import { audioPanel, bindMediaTransport } from './media-player.js';
 
 const registry = document.querySelector('#registry');
 const panels = document.querySelector('#panels');
@@ -34,12 +35,15 @@ function treeRow([label, symbol, amount, variant]) {
 }
 
 function card(file) {
-  const dividers = file.media ? ['faba4.svg', '7d239.svg'] : file.type === 'pptx' ? ['074e5.svg', 'a96cf.svg'] : ['99899.svg', '95fee.svg'];
+  const dividers = file.media ? ['faba4.svg', '7d239.svg'] : ['pptx', 'link'].includes(file.type) ? ['074e5.svg', 'a96cf.svg'] : ['99899.svg', '95fee.svg'];
+  const thumbnail = file.type === 'link'
+    ? `<div class="link-card-preview" aria-hidden="true"><div class="link-card-text"><strong>${file.name}</strong><p>${file.description}</p></div><span class="link-card-domain"><img src="${asset(file.favicon)}" alt="" width="12" height="12">${new URL(file.url).hostname}</span></div>`
+    : file.thumbnail ? `<img class="thumbnail" src="${asset(file.thumbnail)}" alt="">` : '';
   return `<article class="file-card${file.media ? ' media-card' : ''}${file.contained ? ' contained-card' : ''}" data-file="${file.id}" data-type="${file.type}">
-    <img class="thumbnail" src="${asset(file.thumbnail)}" alt="">
+    ${thumbnail}
     <button class="card-open" type="button" aria-label="${file.name}" data-action="file-open"></button>
     ${file.duration ? `<span class="duration">${icon('E96E', 12)} ${file.duration}</span>` : ''}
-    ${file.icon ? `<span class="file-type" style="--file-color:${file.color ?? (['site', 'dashboard', 'section'].includes(file.type) ? '#656c87' : '#2562aa')}">${icon(file.icon)}</span>` : ''}
+    ${file.icon ? `<span class="file-type" style="--file-color:${fileIconColor(file)}">${icon(file.icon)}</span>` : ''}
     <label class="card-select"><input type="checkbox" aria-label="Выбрать ${file.name}"><span></span></label>
     <div class="card-caption"><div class="card-name">${file.name}</div>
       <div class="quick-actions">${cardCommands(file).map(({ id, label, glyph, optional }, index) => `<span class="card-command-slot"${optional ? ' data-extra-command hidden' : ''}>${iconButton(label, glyph, { size: 24, extra: `data-command="${id}"` })}<img class="card-command-divider" src="${asset(dividers[index === 0 ? 0 : 1])}" alt=""></span>`).join('')}
@@ -77,6 +81,7 @@ registry.innerHTML = `<div class="registry-shell">
 </div>`;
 
 const scroll = registry.querySelector('.file-scroll');
+const grid = scroll.querySelector('.file-grid');
 const scrollRegion = scroll.parentElement;
 const track = scrollRegion.querySelector('.scroll-track');
 const thumb = track.firstElementChild;
@@ -108,34 +113,43 @@ function updateCardCommands() {
 }
 
 function updateScrollbar() {
-  const max = scroll.scrollHeight - scroll.clientHeight;
+  const max = Math.max(0, scroll.scrollHeight - scroll.clientHeight);
   scrollRegion.classList.toggle('can-scroll', max > 0);
-  const length = Math.min(track.clientHeight, track.clientHeight * scroll.clientHeight / scroll.scrollHeight);
-  const offset = max ? (track.clientHeight - length) * scroll.scrollTop / max : 0;
   scrollRegion.classList.toggle('has-before', scroll.scrollTop > 0);
   scrollRegion.classList.toggle('has-after', scroll.scrollTop < max - 1);
+  if (!max) return;
+  const trackHeight = track.clientHeight;
+  const length = Math.min(trackHeight, Math.max(24, trackHeight * scroll.clientHeight / scroll.scrollHeight));
+  const offset = (trackHeight - length) * scroll.scrollTop / max;
   thumb.style.height = `${length}px`;
   thumb.style.top = `${offset}px`;
 }
 
 let dragStart;
 track.addEventListener('pointerdown', event => {
-  if (event.target !== thumb) return;
+  if (event.target !== thumb || event.button !== 0 || dragStart) return;
   event.preventDefault();
-  dragStart = { y: event.clientY, top: scroll.scrollTop };
+  dragStart = { pointer: event.pointerId, y: event.clientY, top: scroll.scrollTop };
   track.setPointerCapture(event.pointerId);
+  track.classList.add('dragging');
 });
 track.addEventListener('pointermove', event => {
-  if (!dragStart) return;
+  if (dragStart?.pointer !== event.pointerId) return;
   const distance = track.clientHeight - thumb.offsetHeight;
   if (distance) scroll.scrollTop = dragStart.top + (event.clientY - dragStart.y) * (scroll.scrollHeight - scroll.clientHeight) / distance;
 });
-track.addEventListener('lostpointercapture', () => { dragStart = undefined; });
+track.addEventListener('lostpointercapture', () => {
+  dragStart = undefined;
+  track.classList.remove('dragging');
+});
 scroll.addEventListener('scroll', updateScrollbar, { passive: true });
-new ResizeObserver(() => {
+const registryResize = new ResizeObserver(() => {
   updateCardCommands();
   updateScrollbar();
-}).observe(scroll);
+  positionPanel();
+});
+registryResize.observe(scroll);
+registryResize.observe(grid);
 updateCardCommands();
 
 let panelState;
@@ -145,7 +159,7 @@ const savedContent = new Map();
 
 function positionPanel() {
   if (!panelState) return;
-  if (panelState.surface === 'editor-choice') return;
+  if (['editor-choice', 'audio'].includes(panelState.surface)) return;
   const { anchor, element } = panelState;
   const rect = anchor.getBoundingClientRect();
   if (panelState.surface === 'viewer') {
@@ -161,12 +175,18 @@ function positionPanel() {
 
 function closePanel(restoreFocus = true) {
   if (!panelState) return;
-  const { anchor, trigger } = panelState;
-  trigger?.setAttribute('aria-expanded', 'false');
-  if (restoreFocus) trigger?.focus({ preventScroll: true });
+  const { anchor, trigger, element, surface, cleanup } = panelState;
+  panelState = undefined;
+  if (surface === 'audio') {
+    cleanup();
+    element.close();
+  } else {
+    trigger?.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) trigger?.focus({ preventScroll: true });
+  }
   anchor.classList.remove('is-active');
   panels.replaceChildren();
-  panelState = undefined;
+  if (restoreFocus && surface === 'audio') trigger?.focus({ preventScroll: true });
 }
 
 function openPreview(file, anchor, trigger) {
@@ -177,6 +197,31 @@ function openPreview(file, anchor, trigger) {
   panelState = { surface: 'preview', file, anchor, trigger, element: panels.firstElementChild };
   positionPanel();
   panels.querySelector('.panel-close').focus({ preventScroll: true });
+}
+
+function openAudio(file, card) {
+  if (viewerState) closeViewer(false);
+  closePanel(false);
+  panels.innerHTML = audioPanel(file);
+  const element = panels.firstElementChild;
+  element.querySelector('audio').volume = .5;
+  const cleanup = bindMediaTransport(element, { minuteDigits: 2 });
+  panelState = { surface: 'audio', file, anchor: card, trigger: card.querySelector('.card-open'), element, cleanup };
+  element.addEventListener('close', () => {
+    if (panelState?.element === element) closePanel();
+  }, { once: true });
+  element.showModal();
+}
+
+function openFile(id, trigger) {
+  const file = fileById.get(id);
+  if (!file) return;
+  const card = registry.querySelector(`.file-card[data-file="${file.id}"]`);
+  if (file.type === 'link') window.open(file.url, '_blank', 'noopener,noreferrer');
+  else if (file.type === 'audio') openAudio(file, card);
+  else if (canReadFile(file)) {
+    if (viewerState?.file.id !== id) showViewer(file, 'read', viewerState?.origin ?? trigger);
+  } else openPreview(file, card, trigger);
 }
 
 function showViewer(file, mode, origin) {
@@ -218,9 +263,9 @@ function showViewer(file, mode, origin) {
   viewerState.editor = editor;
   viewerState.cleanupContent = bindFileContent(viewer, file, outline, navigate, draft ?? content, editor);
   viewerState.cleanupNavigation = bindFileNavigation(viewer, fileNavigation, (id, action) => {
-    const next = fileNavigation.files.find(item => item.id === id);
-    if (!canReadFile(next) || next.id === viewerState.file.id || viewerState.mode !== 'read') return;
-    showViewer(next, 'read', origin);
+    if (id === viewerState.file.id || viewerState.mode !== 'read') return;
+    openFile(id);
+    if (viewerState?.file.id !== id) return;
     const focusTarget = action === 'navigate-file'
       ? viewer.querySelector('.file-preview[aria-current]')
       : viewer.querySelector(`[data-action="${action}"]`) ?? viewer.querySelector('.file-nav-arrow');
@@ -230,7 +275,7 @@ function showViewer(file, mode, origin) {
   viewer.querySelector('.viewer-close').focus({ preventScroll: true });
 }
 
-function closeViewer() {
+function closeViewer(restoreFocus = true) {
   const { origin } = viewerState;
   viewerState.cleanupOutline?.();
   viewerState.cleanupFormatting?.();
@@ -242,8 +287,10 @@ function closeViewer() {
   viewer.hidden = true;
   viewer.replaceChildren();
   registry.inert = false;
-  origin.closest('.file-card')?.querySelector('.card-open').focus({ preventScroll: true });
-  origin.focus({ preventScroll: true });
+  if (restoreFocus) {
+    origin.closest('.file-card')?.querySelector('.card-open').focus({ preventScroll: true });
+    origin.focus({ preventScroll: true });
+  }
 }
 
 function toggleViewerMenu(trigger) {
@@ -306,8 +353,8 @@ registry.addEventListener('click', event => {
   const anchor = trigger?.closest('.file-card');
   if (!anchor) return;
   const file = fileById.get(anchor.dataset.file);
-  if (trigger.dataset.action === 'file-open' && canReadFile(file)) showViewer(file, 'read', trigger);
-  else if (panelState?.anchor === anchor && panelState.trigger === trigger) closePanel();
+  if (panelState?.anchor === anchor && panelState.trigger === trigger) closePanel();
+  else if (trigger.dataset.action === 'file-open') openFile(file.id, trigger);
   else openPreview(file, anchor, trigger);
 });
 viewer.addEventListener('click', event => {
@@ -359,6 +406,7 @@ document.addEventListener('click', event => {
 });
 document.addEventListener('keydown', event => {
   if (event.key !== 'Escape') return;
+  if (panelState?.surface === 'audio') return;
   if (panelState) closePanel();
   else if (viewerState?.mode === 'read' && viewerState.fileNavigation.open) {
     const toggle = viewer.querySelector('.file-strip-toggle');

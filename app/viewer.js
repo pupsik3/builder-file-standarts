@@ -1,4 +1,4 @@
-import { asset, icon, iconButton, messagesButton, saveFileButton, viewerClose } from './ui.js';
+import { asset, fileIconColor, icon, iconButton, messagesButton, saveFileButton, viewerClose } from './ui.js';
 import { commandList, panelClose } from './menus.js';
 import { flattenNavigation, renderOutline } from './outline.js';
 import { renderDocumentFlow } from './document.js';
@@ -57,20 +57,21 @@ function header(file, editing) {
   const doc = file.type === 'sabydoc';
   const rotating = ['docx', 'pdf', 'photo'].includes(file.type);
   const canRotate = rotating;
-  const search = ['docx', 'pdf', 'sheet'].includes(file.type);
+  const search = ['docx', 'pdf', 'sheet', 'xml', 'html', 'txt'].includes(file.type);
+  const editVisible = editing || !['dashboard', 'pdf', 'html'].includes(file.type);
   const entry = browserEditorEntry[file.type];
   const editAttributes = entry === 'chooser'
     ? 'data-action="editor-choice" aria-haspopup="dialog" aria-expanded="false"'
     : entry === 'direct' ? 'data-action="open-browser-editor"' : 'data-command="edit"';
   return `<header class="viewer-header">
-    <div class="viewer-title">${file.icon && !['dashboard','section'].includes(file.type) ? icon(file.icon, 24) : ''}<span>${file.title ?? file.name}</span></div>
+    <div class="viewer-title"${['xml', 'html', 'txt'].includes(file.type) ? ` style="--viewer-file-icon:${fileIconColor(file)}"` : ''}>${file.icon && !['dashboard','section'].includes(file.type) ? icon(file.icon, 24) : ''}<span>${file.title ?? file.name}</span></div>
     <div class="viewer-center">${site || section || (dashboard && editing) ? deviceSwitch() : editing && file.type === 'diagram' ? drawingTools() : ''}</div>
     <div class="header-actions">
       ${rotating || search || section ? `<div class="viewer-header-tools">${rotating ? `<div class="viewer-rotations">${iconButton('Повернуть влево', 'E60A', { size:24, action:canRotate ? 'rotate-left' : '' })}${iconButton('Повернуть вправо', 'E609', { size:24, action:canRotate ? 'rotate-right' : '' })}</div>` : ''}${search ? iconButton('Поиск в файле', 'E662', { size:24, className:'viewer-search' }) : ''}${section ? iconButton('Предпросмотр', 'EAB9', { size:20, className:'viewer-preview' }) : ''}</div>` : ''}
       ${editing ? `<div class="editor-history">${iconButton('Отменить', 'E6CF', { size: 20 })}${iconButton('Повторить', 'E6CA', { size: 20 })}${doc ? '' : iconButton('Сбросить', 'E629', { size: 20, extra: 'disabled' })}${site ? iconButton('Предпросмотр', 'EAB9', { size: 20 }) : ''}</div>` : ''}
       ${dashboard && !editing ? '' : zoom(100)}
       ${(!editing || doc) && !dashboard ? lastRevision() : ''}
-      ${(dashboard && !editing) || file.type === 'pdf' ? '' : editing ? saveFileButton() : `<button class="header-pill edit" type="button" ${editAttributes}>Изменить ${icon('E660', 16)}</button>`}
+      ${editVisible ? editing ? saveFileButton() : `<button class="header-pill edit" type="button" ${editAttributes}>Изменить ${icon('E660', 16)}</button>` : ''}
       ${viewerClose()}
     </div>
   </header>`;

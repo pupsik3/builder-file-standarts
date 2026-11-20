@@ -1,5 +1,5 @@
-import { asset, icon } from './ui.js';
-import { canReadFile } from './files.js';
+import { asset, fileIconColor, icon } from './ui.js';
+import { canOpenFromStrip, canReadFile } from './files.js';
 
 export function fileNeighbors(list, currentId) {
   const available = list.filter(canReadFile);
@@ -8,12 +8,11 @@ export function fileNeighbors(list, currentId) {
 }
 
 function thumbnail(file, currentId) {
-  const color = file.color ?? (['site', 'dashboard', 'section'].includes(file.type) ? '#656c87' : '#2562aa');
   // The photo's square preview uses the full-resolution source already in the project.
   const source = file.type === 'photo' ? file.content : file.thumbnail;
-  return `<button type="button" class="file-preview${file.contained ? ' contained-preview' : ''}" data-type="${file.type}" data-action="navigate-file" data-id="${file.id}" aria-label="${file.name}"${file.id === currentId ? ' aria-current="true"' : ''}${canReadFile(file) ? '' : ' aria-disabled="true"'}>
-    <img class="file-preview-image" src="${asset(source)}" alt=""><span class="file-preview-shade" aria-hidden="true"></span>
-    ${file.icon ? `<span class="file-preview-type" style="--file-color:${color}" aria-hidden="true">${icon(file.icon)}</span>` : ''}
+  return `<button type="button" class="file-preview${file.contained ? ' contained-preview' : ''}" data-type="${file.type}" data-action="navigate-file" data-id="${file.id}" aria-label="${file.name}"${file.id === currentId ? ' aria-current="true"' : ''}${canOpenFromStrip(file) ? '' : ' aria-disabled="true"'}>
+    ${source ? `<img class="file-preview-image" src="${asset(source)}" alt="">` : ''}<span class="file-preview-shade" aria-hidden="true"></span>
+    ${file.icon ? `<span class="file-preview-type" style="--file-color:${fileIconColor(file)}" aria-hidden="true">${icon(file.icon)}</span>` : ''}
     ${file.type === 'video' ? `<img class="file-preview-play" src="${asset('90da0.svg')}" alt="">` : ''}
   </button>`;
 }

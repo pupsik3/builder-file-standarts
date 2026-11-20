@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<onboarding-plan id="new-employee" version="1.0" xml:lang="ru">
+  <title>План адаптации сотрудника</title>
+  <summary>Первые четыре недели в команде</summary>
+  <duration unit="week">4</duration>
+
+  <!-- Периоды отсчитываются с первого рабочего дня. -->
+  <stages>
+    <stage id="orientation" order="1">
+      <period>Первый день</period>
+      <title>Знакомство с командой</title>
+      <task>Получить доступ к рабочим сервисам и познакомиться с наставником.</task>
+    </stage>
+    <stage id="first-task" order="2">
+      <period>Первая неделя</period>
+      <title>Первая рабочая задача</title>
+      <task>Изучить инструкции команды и выполнить небольшую задачу с наставником.</task>
+    </stage>
+    <stage id="independent-work" order="3">
+      <period>Со второй по четвёртую неделю</period>
+      <title>Самостоятельная работа</title>
+      <task>Выполнить задачу самостоятельно и обсудить результаты с руководителем.</task>
+    </stage>
+  </stages>
+
+  <result>Сотрудник пользуется рабочими сервисами, знает, к кому обращаться за помощью, и может самостоятельно выполнить типовую задачу.</result>
+</onboarding-plan>

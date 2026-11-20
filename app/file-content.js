@@ -2,6 +2,7 @@ import { asset, icon, iconButton } from './ui.js';
 import { docxPages } from './office-pages.js';
 import { sheets } from './sheet-data.js';
 import { renderDashboard } from './dashboard.js';
+import { bindMediaTransport, mediaSeek, mediaSound } from './media-player.js';
 
 export const escape = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 
@@ -75,11 +76,11 @@ export function spreadsheet(state, content, editing = false) {
 
 export function video(file, editing = false) {
   return `<main class="viewer-workspace video-workspace"><div class="video-player"><video src="${asset(file.content)}" width="1920" height="1080" preload="metadata" playsinline aria-label="Видео.mp4"></video>
-    <div class="video-controls"><input class="video-progress" type="range" min="0" max="0" step="0.01" value="0" aria-label="Позиция воспроизведения"><div class="video-control-row">
-      <button type="button" class="video-step" aria-label="Назад">◀◀</button><button type="button" class="video-play" data-action="video-play" aria-label="Воспроизвести">▶</button><button type="button" class="video-step" aria-label="Вперёд">▶▶</button>
-      ${editing ? '' : '<button type="button" class="video-rate" aria-label="Скорость воспроизведения 1x">1x</button>'}<div class="video-sound"><button type="button" data-action="video-mute" aria-label="Выключить звук"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 6h3l3-3v10l-3-3H2V6Z" fill="currentColor"/><path d="M10 5c2 2 2 4 0 6m2-8c3 3 3 7 0 10" stroke="currentColor" stroke-linecap="round"/></svg></button><input class="video-volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Громкость"></div>
-      <output class="video-time" aria-live="off">0:00 / 0:00</output><span class="video-control-spacer"></span>${editing ? `<span class="video-editor-chevron" aria-hidden="true">${icon('EB8A')}</span>` : `<button type="button" aria-label="Снимок кадра"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 5h3l1-2h4l1 2h3v8H2V5Z" stroke="currentColor"/><circle cx="8" cy="8.5" r="2.5" stroke="currentColor"/></svg></button><button type="button" data-action="video-fullscreen" aria-label="Полный экран" aria-pressed="false">⛶</button>`}</div></div>
-    <p class="video-error" hidden>Не удалось воспроизвести видео.</p></div></main>`;
+    <div class="video-controls">${mediaSeek('video-progress')}<div class="video-control-row">
+      <button type="button" class="video-step" aria-label="Назад">◀◀</button><button type="button" class="video-play" data-action="media-play" aria-label="Воспроизвести">▶</button><button type="button" class="video-step" aria-label="Вперёд">▶▶</button>
+      ${editing ? '' : '<button type="button" class="video-rate" aria-label="Скорость воспроизведения 1x">1x</button>'}<div class="video-sound">${mediaSound('video-volume')}</div>
+      <output class="video-time" aria-live="off"><span data-media-current>0:00</span> / <span data-media-duration>0:00</span></output><span class="video-control-spacer"></span>${editing ? `<span class="video-editor-chevron" aria-hidden="true">${icon('EB8A')}</span>` : `<button type="button" aria-label="Снимок кадра"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 5h3l1-2h4l1 2h3v8H2V5Z" stroke="currentColor"/><circle cx="8" cy="8.5" r="2.5" stroke="currentColor"/></svg></button><button type="button" data-action="video-fullscreen" aria-label="Полный экран" aria-pressed="false">⛶</button>`}</div></div>
+    <p class="video-error" data-media-error role="status" hidden>Не удалось воспроизвести видео.</p></div></main>`;
 }
 
 export function renderFileContent(file, editing, state, content) {
@@ -88,6 +89,8 @@ export function renderFileContent(file, editing, state, content) {
   if (file.type === 'sheet') return spreadsheet(state, content);
   if (file.type === 'photo') return `<main class="viewer-workspace photo-workspace"><img src="${asset(file.content)}" alt="Абстрактная композиция из округлых форм в кремовых, терракотовых и серых тонах"></main>`;
   if (file.type === 'video') return video(file);
+  if (file.type === 'html') return `<main class="viewer-workspace html-workspace"><iframe class="html-document" src="${asset(file.content)}" title="${file.name}" sandbox></iframe></main>`;
+  if (file.type === 'xml' || file.type === 'txt') return `<main class="viewer-workspace text-workspace" data-format="${file.type}"><pre class="text-document" aria-label="${file.name}" tabindex="0" aria-busy="true"><code></code></pre></main>`;
   if (file.type === 'section') return `<main class="viewer-workspace section-workspace"><article class="section-content"><div class="section-copy"><h1>Начните с того, что интересно, и найдите свой путь среди историй, тем и деталей</h1><p>Здесь собраны истории, материалы и детали, из которых складывается общая картина. Выберите направление и исследуйте дальше</p><button type="button" class="section-learn">Узнать больше</button><div class="section-author"><div class="section-avatar"><img src="${asset(file.content)}" alt=""></div><div><strong>Алексей</strong><small>Специалист поддержки, перезвонит в течение 10 минут</small></div></div></div><div class="section-photo"><img src="${asset(file.content)}" alt="Тёмные листья"></div></article></main>`;
   if (file.type === 'dashboard') return renderDashboard(editing);
   return '';
@@ -171,8 +174,51 @@ function bindContentRotation(root, file, state, content) {
   };
 }
 
+function highlightXML(source) {
+  const fragment = document.createDocumentFragment();
+  const markup = /(<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<\/?[\w:.-]+(?:[^"'<>]|"[^"]*"|'[^']*')*>)/g;
+  const token = /("[^"]*"|'[^']*'|<\??\/?|[?/]>|>|=|\s+)/g;
+  const append = (text, kind) => {
+    if (!kind) { fragment.append(text); return; }
+    const span = document.createElement('span');
+    span.className = `xml-${kind}`;
+    span.textContent = text;
+    fragment.append(span);
+  };
+  for (const [index, part] of source.split(markup).entries()) {
+    if (index % 2 === 0) append(part);
+    else if (part.startsWith('<!--')) append(part, 'comment');
+    else if (part.startsWith('<![')) append(part);
+    else for (const piece of part.split(token)) {
+      if (!piece || /^\s+$/.test(piece)) append(piece);
+      else if (/^["']/.test(piece)) append(piece, 'value');
+      else if (/[<>=]/.test(piece)) append(piece, 'punctuation');
+      else append(piece, 'tag');
+    }
+  }
+  return fragment;
+}
+
+function bindTextDocument(root, file) {
+  const paper = root.querySelector('.text-document');
+  if (!paper) return;
+  const controller = new AbortController();
+  const code = paper.querySelector('code');
+  fetch(asset(file.content), { signal: controller.signal }).then(async response => {
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const source = await response.text();
+    if (!controller.signal.aborted) code.replaceChildren(file.type === 'xml' ? highlightXML(source) : source);
+  }).catch(() => {
+    if (controller.signal.aborted) return;
+    paper.dataset.state = 'error';
+    code.textContent = 'Не удалось открыть файл.';
+  }).finally(() => paper.removeAttribute('aria-busy'));
+  return () => controller.abort();
+}
+
 export function bindFileContent(root, file, state, onNavigate, content, editor) {
   const rotation = editor ? undefined : bindContentRotation(root, file, state, content);
+  const cleanupText = bindTextDocument(root, file);
   const handleClick = event => {
     const action = event.target.closest('[data-action]');
     if (!action) return;
@@ -198,72 +244,12 @@ export function bindFileContent(root, file, state, onNavigate, content, editor) 
     }
   };
   root.addEventListener('click', handleClick);
-  const media = root.querySelector('video');
-  if (!media) return () => {
-    rotation?.cleanup();
-    root.removeEventListener('click', handleClick);
-  };
-  const player = media.parentElement;
-  const seek = player.querySelector('.video-progress');
-  const volume = player.querySelector('.video-volume');
-  const play = player.querySelector('.video-play');
-  const mute = player.querySelector('[data-action="video-mute"]');
-  const time = seconds => `${Math.floor((seconds || 0) / 60)}:${String(Math.floor((seconds || 0) % 60)).padStart(2, '0')}`;
-  const sync = () => {
-    seek.max = Number.isFinite(media.duration) ? media.duration : 0;
-    seek.value = media.currentTime;
-    seek.setAttribute('aria-valuetext', `${time(media.currentTime)} из ${time(media.duration)}`);
-    seek.style.setProperty('--progress', `${media.duration ? media.currentTime / media.duration * 100 : 0}%`);
-    player.querySelector('.video-time').textContent = `${time(media.currentTime)} / ${time(media.duration)}`;
-    play.textContent = media.paused ? '▶' : 'Ⅱ';
-    play.setAttribute('aria-label', media.paused ? 'Воспроизвести' : 'Пауза');
-    mute.setAttribute('aria-label', media.muted ? 'Включить звук' : 'Выключить звук');
-    mute.setAttribute('aria-pressed', media.muted);
-    volume.value = media.muted ? 0 : media.volume;
-    volume.setAttribute('aria-valuetext', `${Math.round(Number(volume.value) * 100)}%`);
-  };
-  const mediaClick = async event => {
-    const action = event.target.closest('[data-action]')?.dataset.action;
-    if (action === 'video-play') {
-      if (media.paused) {
-        try { await media.play(); } catch { player.querySelector('.video-error').hidden = false; }
-      } else media.pause();
-    }
-    if (action === 'video-mute') media.muted = !media.muted;
-    if (action === 'video-fullscreen') {
-      try {
-        if (document.fullscreenElement) await document.exitFullscreen();
-        else if (player.requestFullscreen) await player.requestFullscreen();
-        else if (media.webkitEnterFullscreen) media.webkitEnterFullscreen();
-      } catch {
-        const error = player.querySelector('.video-error');
-        error.textContent = 'Браузер не разрешил полноэкранный режим.';
-        error.hidden = false;
-      }
-    }
-  };
-  const seekInput = () => { if (Number.isFinite(media.duration)) media.currentTime = Number(seek.value); };
-  const volumeInput = () => { media.volume = Number(volume.value); media.muted = media.volume === 0; };
-  player.addEventListener('click', mediaClick);
-  const fullscreenChange = () => {
-    const fullscreen = document.fullscreenElement === player;
-    const button = player.querySelector('[data-action="video-fullscreen"]');
-    if (!button) return;
-    button.setAttribute('aria-pressed', fullscreen);
-    button.setAttribute('aria-label', fullscreen ? 'Выйти из полноэкранного режима' : 'Полный экран');
-  };
-  document.addEventListener('fullscreenchange', fullscreenChange);
-  seek.addEventListener('input', seekInput);
-  volume.addEventListener('input', volumeInput);
-  const events = ['loadedmetadata', 'durationchange', 'timeupdate', 'play', 'pause', 'ended', 'volumechange'];
-  events.forEach(event => media.addEventListener(event, sync));
-  sync();
+  const player = root.querySelector('.video-player');
+  const cleanupMedia = player ? bindMediaTransport(player) : undefined;
   return () => {
-    media.pause();
-    if (document.fullscreenElement === player) document.exitFullscreen().catch(() => {});
-    document.removeEventListener('fullscreenchange', fullscreenChange);
-    events.forEach(event => media.removeEventListener(event, sync));
-    player.removeEventListener('click', mediaClick);
+    rotation?.cleanup();
+    cleanupText?.();
+    cleanupMedia?.();
     root.removeEventListener('click', handleClick);
   };
 }

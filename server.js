@@ -9,6 +9,7 @@ const types = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml',
   '.png': 'image/png', '.jpg': 'image/jpeg', '.ttf': 'font/ttf', '.webp': 'image/webp', '.mp4': 'video/mp4',
+  '.mp3': 'audio/mpeg', '.xml': 'application/xml; charset=utf-8', '.txt': 'text/plain; charset=utf-8',
 };
 
 createServer(async (request, response) => {
@@ -19,8 +20,9 @@ createServer(async (request, response) => {
       response.writeHead(404).end();
       return;
     }
-    const contentType = types[extname(target)] ?? 'application/octet-stream';
-    if (extname(target) === '.mp4') {
+    const extension = extname(target);
+    const contentType = types[extension] ?? 'application/octet-stream';
+    if (extension === '.mp4' || extension === '.mp3') {
       const { size } = await stat(target);
       const range = request.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
       if (range) {

@@ -11,6 +11,11 @@ const records = [
   { id: 'pptx', type: 'pptx', name: 'Открытая мастерская.pptx', thumbnail: 'a29a3.png', sizeLabel: '2.1 МБ', icon: 'E733', color: '#db4200', contained: true, content: ['269fd.png', 'workshop-slide-2.png', 'workshop-slide-3.png'] },
   { id: 'dashboard', type: 'dashboard', name: 'Дашборд', thumbnail: 'f0ea7.png', sizeLabel: '3 КБ', icon: 'E747', content: 'dashboard' },
   { id: 'section', type: 'section', name: 'Новая секция', thumbnail: '36bf5.png', sizeLabel: '1 КБ', icon: 'EBDF', contained: true, content: '9aabf.png' },
+  { id: 'link', type: 'link', name: 'Saby - система для управления бизнесом', thumbnail: 'eefe8.png', favicon: '9b037.svg', url: 'https://saby.ru/', description: 'Ведите бизнес в одной системе — Saby. Обменивайтесь документами, ведите бухгалтерию и финансы, автоматизируйте бизнес, проводите совещания, ставьте задачи и рассчитывайте выплаты сотрудникам (ранее СБИС или sbis).' },
+  { id: 'mp3', type: 'audio', name: 'Да я люблю тебя.mp3', trackTitle: 'Да Я Люблю Тебя (Мем)', preview: '241a1.svg', sizeLabel: '1 МБ', icon: 'E73C', content: 'da_ya_lyublyu_tebya_mem-mob4ik.com.mp3' },
+  { id: 'xml', type: 'xml', name: 'План адаптации сотрудника.xml', thumbnail: '3bf72.png', sizeLabel: '2 КБ', icon: 'E738', color: '#ccc', content: 'onboarding-plan.xml' },
+  { id: 'html', type: 'html', name: 'План адаптации сотрудника.html', thumbnail: '4a731.png', sizeLabel: '3 КБ', icon: 'EAB7', color: '#db4200', content: 'onboarding-plan.html' },
+  { id: 'txt', type: 'txt', name: 'Чек-лист первого рабочего дня.txt', thumbnail: 'a8c99.png', sizeLabel: '1 КБ', icon: 'E732', color: '#ccc', content: 'first-day-checklist.txt' },
 ];
 
 const navigation = {
@@ -30,8 +35,9 @@ const navigation = {
   ],
 };
 
-const readerTypes = new Set(['video', 'photo', 'sabydoc', 'site', 'sheet', 'pdf', 'docx', 'diagram', 'pptx', 'dashboard', 'section']);
+const readerTypes = new Set(['video', 'photo', 'sabydoc', 'site', 'sheet', 'pdf', 'docx', 'diagram', 'pptx', 'dashboard', 'section', 'xml', 'html', 'txt']);
 export const canReadFile = file => Boolean(file?.content && readerTypes.has(file.type));
+export const canOpenFromStrip = file => canReadFile(file) || file?.type === 'link' || file?.type === 'audio';
 
 export const browserEditorEntry = Object.freeze({
   docx: 'chooser', pptx: 'chooser', sheet: 'chooser', photo: 'chooser', video: 'direct',

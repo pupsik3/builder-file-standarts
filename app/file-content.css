@@ -10,6 +10,19 @@
 [data-type='pdf'] .viewer-title .icon { color:#c2140a; }
 [data-type='pptx'] .viewer-title .icon { color:#db4200; }
 .office-workspace { background:transparent; padding:0 0 8px; border-radius:0; }
+.viewer-shell.reading { --reader-canvas: #eaeaea; }
+.reading .office-workspace { background:var(--reader-canvas); padding-top:10px; border-radius:8px 8px 0 0; }
+.html-workspace, .text-workspace[data-format='txt'] { background:var(--reader-canvas); }
+.text-workspace[data-format='xml'] { background:transparent; }
+.html-document, .text-document { display:block; width:min(100%, 1250px); margin-inline:auto; border:0; }
+.html-document { height:100%; background:#f0f3f7; }
+.text-document { min-height:100%; margin-block:0; padding:8px; overflow:auto; background:white; color:#111; font:13px/1.28 Consolas, 'Courier New', monospace; }
+.text-document code { font:inherit; }
+.text-document[data-state='error'] { color:#656c87; }
+.xml-tag { color:#b31014; }
+.xml-punctuation { color:#0000e8; }
+.xml-comment { color:#656c87; }
+.xml-value { color:#111; }
 .office-pages { display:flex; flex-direction:column; align-items:center; gap:12px; min-width:var(--page-inline-size,876px); }
 .office-page-slot { position:relative; flex:none; width:var(--page-inline-size,876px); height:var(--page-block-size,1159px); }
 .office-page-slot .office-page { position:absolute; top:50%; left:50%; translate:-50% -50%; rotate:var(--content-rotation,0deg); }
@@ -99,6 +112,33 @@
 .video-control-spacer { flex:1; }
 .video-error { position:absolute; top:50%; left:50%; translate:-50% -50%; background:#000b; padding:16px; }
 .video-player:fullscreen { width:100vw; height:100vh; }
+
+.audio-panel { inset:0; margin:auto; width:min(550px, calc(100dvw - 32px)); max-height:calc(100dvh - 16px); min-height:min(262px, calc(100dvh - 16px)); padding:62px 16px 16px; border:0; overflow:auto; box-shadow:0 0 46px #0000001f, 0 0 15px #0000001f; }
+.audio-panel::backdrop { background:transparent; }
+.audio-close { position:absolute; top:6px; right:6px; border-radius:50%; }
+.audio-heading { text-align:center; }
+.audio-heading h2 { margin:0; font-size:18px; line-height:22px; font-weight:600; }
+.audio-heading p { margin:23px 0 0; color:var(--muted); font-size:16px; line-height:20px; }
+.audio-error { margin:8px 0 0; color:#c2140a; text-align:center; }
+.audio-progress { margin-top:24px; }
+.audio-timing { display:flex; justify-content:space-between; color:#737373; font-size:12px; line-height:16px; }
+.audio-panel input[type='range'] { display:block; appearance:none; height:18px; margin:0; padding:0; border:0; background:transparent; cursor:pointer; }
+.audio-panel input[type='range']:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.audio-seek { width:100%; --track-color:#999; }
+.audio-volume { width:54px; --track-color:#2562aa; }
+.audio-panel input[type='range']::-webkit-slider-runnable-track { height:6px; border-radius:6px; background:linear-gradient(to right,var(--track-color) var(--progress,0%),#ccc var(--progress,0%)); }
+.audio-panel input[type='range']::-moz-range-track { height:6px; border-radius:6px; background:linear-gradient(to right,var(--track-color) var(--progress,0%),#ccc var(--progress,0%)); }
+.audio-panel input[type='range']::-webkit-slider-thumb { appearance:none; width:14px; height:14px; margin-top:-4px; border-radius:50%; background:white; box-shadow:0 0 5px #0005; }
+.audio-panel input[type='range']::-moz-range-thumb { width:14px; height:14px; border:0; border-radius:50%; background:white; box-shadow:0 0 5px #0005; }
+.audio-controls, .audio-sound { display:flex; align-items:center; gap:14px; }
+.audio-controls { margin-top:14px; }
+.audio-sound { margin-left:auto; }
+.audio-controls button { display:grid; place-items:center; flex:none; width:24px; height:28px; padding:0; border:0; border-radius:50%; color:var(--toolbar); background:transparent; }
+.audio-controls button:not([aria-disabled='true']):is(:hover,:focus-visible) { background:#eee; }
+.audio-controls button:not([aria-disabled='true']):active { background:#eaeaea; }
+.audio-controls .audio-play { width:32px; height:32px; border:1px solid currentColor; font-size:13px; }
+.audio-step { font-size:10px; cursor:default; }
+.audio-rate { color:#2562aa; font-size:16px; }
 .dashboard-workspace { background:#f8f8f8; border-radius:8px 8px 0 0; padding-bottom:8px; }
 .editing .dashboard-workspace { padding:8px; }
 .dashboard-layout { display:flex; flex-direction:column; gap:8px; }

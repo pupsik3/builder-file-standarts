@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>План адаптации сотрудника</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: #202936;
+      background: #f0f3f7;
+      font: 1rem / 1.55 system-ui, sans-serif;
+    }
+
+    main {
+      max-inline-size: 52rem;
+      margin-inline: auto;
+      padding: clamp(1rem, 5vw, 3rem);
+    }
+
+    header {
+      padding: clamp(1.25rem, 5vw, 3rem);
+      border-radius: 1rem;
+      background: #203753;
+      color: #fff;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: clamp(1.75rem, 6vw, 3rem); line-height: 1.1; }
+    h2 { font-size: 1.5rem; line-height: 1.2; }
+    h3 { font-size: 1.125rem; }
+    header p { margin-block-start: 0.75rem; color: #dbe6f3; }
+    section { margin-block-start: 1.75rem; }
+    ol { padding-inline-start: 1.5rem; margin: 1rem 0 0; }
+
+    li {
+      margin-block-end: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: #fff;
+      border: 1px solid #d6deea;
+      border-radius: 0.625rem;
+    }
+
+    li::marker { color: #254c7b; font-weight: 700; }
+    .period { color: #365c87; font-size: 0.875rem; font-weight: 600; }
+    li h3, li .task, .result p { margin-block-start: 0.25rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>План адаптации сотрудника</h1>
+      <p>Первые четыре недели в команде</p>
+    </header>
+
+    <section>
+      <h2>Этапы адаптации</h2>
+      <ol>
+        <li>
+          <p class="period">Первый день</p>
+          <h3>Знакомство с командой</h3>
+          <p class="task">Получить доступ к рабочим сервисам и познакомиться с наставником.</p>
+        </li>
+        <li>
+          <p class="period">Первая неделя</p>
+          <h3>Первая рабочая задача</h3>
+          <p class="task">Изучить инструкции команды и выполнить небольшую задачу с наставником.</p>
+        </li>
+        <li>
+          <p class="period">Со второй по четвёртую неделю</p>
+          <h3>Самостоятельная работа</h3>
+          <p class="task">Выполнить задачу самостоятельно и обсудить результаты с руководителем.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="result">
+      <h2>Ожидаемый результат</h2>
+      <p>Сотрудник пользуется рабочими сервисами, знает, к кому обращаться за помощью, и может самостоятельно выполнить типовую задачу.</p>
+    </section>
+  </main>
+</body>
+</html>

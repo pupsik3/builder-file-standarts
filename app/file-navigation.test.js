@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canReadFile } from './files.js';
+import { canOpenFromStrip, canReadFile, files } from './files.js';
 import { fileNeighbors, renderFileNavigation } from './file-navigation.js';
 
 const a = { id: 'a', type: 'photo', name: 'A', thumbnail: 'a.png', content: 'a.png' };
@@ -21,4 +21,16 @@ test('one available file and empty lists have no side arrows', () => {
   const html = renderFileNavigation([survey, a], a.id, { open: false });
   assert.equal(html.includes('class="file-nav-arrow'), false);
   assert.match(html, /data-id="survey"[^>]*aria-disabled="true"/);
+});
+
+test('audio and links can open from the strip but are skipped by the arrows', () => {
+  const byId = id => files.find(file => file.id === id);
+  const [dashboard, section, link, audio, xml, html, txt] = ['dashboard', 'section', 'link', 'mp3', 'xml', 'html', 'txt'].map(byId);
+  assert.deepEqual(fileNeighbors(files, section.id), { previous: dashboard, next: xml });
+  assert.deepEqual(fileNeighbors(files, xml.id), { previous: section, next: html });
+  assert.deepEqual(fileNeighbors(files, txt.id), { previous: html, next: undefined });
+  for (const file of [link, audio]) {
+    assert.equal(canReadFile(file), false);
+    assert.equal(canOpenFromStrip(file), true);
+  }
 });

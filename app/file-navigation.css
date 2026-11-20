@@ -23,6 +23,8 @@
 .file-preview[data-type='docx'] .file-preview-image { height:141.52%; top:-.56%; object-fit:fill; }
 .file-preview[data-type='dashboard'] .file-preview-image { height:141.52%; object-fit:fill; }
 .file-preview[data-type='survey'] .file-preview-image { width:104.17%; height:147.42%; top:-.15%; object-fit:fill; }
+.file-preview:is([data-type='link'],[data-type='xml'],[data-type='html'],[data-type='txt']) .file-preview-image { object-position:top; }
+.file-preview[data-type='audio'] .file-preview-type { inset:0; margin:auto; }
 .file-preview.contained-preview .file-preview-image { object-fit:contain; }
 .file-preview-shade { position:absolute; inset:0; background:rgba(0,0,0,.3); opacity:0; pointer-events:none; }
 .file-preview:is(:hover,:focus-visible) .file-preview-shade { opacity:1; }
